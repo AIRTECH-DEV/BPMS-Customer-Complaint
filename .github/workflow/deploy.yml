@@ -1,4 +1,4 @@
-name: Auto Deploy to Apps Script
+name: Final Apps Script
 
 on:
   push:
@@ -8,21 +8,25 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install clasp
         run: npm install -g @google/clasp
 
-      - name: Inject credentials
+      - name: Inject Google credentials
         run: echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
 
-      - name: Push to Apps Script
+      - name: Push code to Apps Script
         run: clasp push --force
 
-      - name: Update Deployment (same URL always)
-        run: clasp deploy -i ${{ secrets.CLASP_DEPLOYMENT_ID }} --description "Deploy - ${{ github.sha }}"
+      # ✅ Updates the SAME deployment = URL never changes
+      - name: Update Existing Deployment
+        run: clasp deploy -i ${{ secrets.CLASP_DEPLOYMENT_ID }} --description "Updated - ${{ github.sha }}"
