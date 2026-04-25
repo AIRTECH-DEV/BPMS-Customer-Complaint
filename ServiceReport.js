@@ -97,6 +97,12 @@ const match = masterData.find(r => {
       proofUrl = file.getUrl();
     }
 
+    const technicianNames = (formData.technicianNames && formData.technicianNames.toString().trim()) ?
+      formData.technicianNames.toString().trim() :
+      [formData.tech, formData.helper]
+        .filter(name => name && name.toString().trim())
+        .join(", ");
+
     // 3. APPEND DATA (Matches your specific column order)
     reportSheet.appendRow([
       new Date(),                // Time Stamp
@@ -119,7 +125,7 @@ const match = masterData.find(r => {
       //formData.brand,
       formData.make,            // Machine Brand
       formData.complaintType,    // Complaint Type
-      formData.tech,             // Technician Name
+      technicianNames,           // Technician Name + Helper Name
       formData.resolved,         // Complaint Resolved?
       formData.paymentStatus || "N/A", // Column P: Payment Received? (Yes/Pending/No)
       formData.customerSig,      // Customer sign (Base64)
