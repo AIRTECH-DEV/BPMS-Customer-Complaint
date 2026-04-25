@@ -155,7 +155,7 @@
                         <div class="col-md-3 mb-2"><label class="small fw-bold">Make</label> <input type="text" class="form-control machine-make"></div>
                        <div class="col-md-3 mb-2">
                        <label class="small fw-bold">Type</label>
-                       <select class="form-control machine-type" onchange="toggleOtherInput(this)">
+                       <select class="form-control machine-type" onchange="toggleMachineTypeInput(this)">
                           <option value="" selected disabled>Select Type--</option>
                           <option value="SAC">SAC</option>
                           <option value="DAC">DAC</option>
@@ -256,10 +256,40 @@
                 </div>
                </div>
                   <div class="row mb-4">
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                       <label class="form-label fw-bold">Technician Name</label>
-                      <input type="text" class="form-control" id="tech" placeholder="Enter your full name" required>
-                </div>
+                      <select class="form-select" id="tech" required onchange="toggleOtherTech()">
+                        <option value="" selected disabled>-- Select Technician --</option>
+                        <option value="prasanna Khamkar">prasanna Khamkar</option>
+                        <option value="Ishwar jaybhaye">Ishwar jaybhaye</option>
+                        <option value="Umesh Sode">Umesh Sode</option>
+                        <option value="Thorat chandrakant">Thorat chandrakant</option>
+                        <option value="Kiran Polekar">Kiran Polekar</option>
+                        <option value="bhushan karekar">bhushan karekar</option>
+                        <option value="Rajiv Kumar">Rajiv Kumar</option>
+                        <option value="Aman Khan">Aman Khan</option>
+                        <option value="Rajbhadur Pal">Rajbhadur Pal</option>
+                        <option value="Sadik Sayyed">Sadik Sayyed</option>
+                        <option value="Mukesh Bhingrdive">Mukesh Bhingrdive</option>
+                        <option value="Sakhir Shaikh">Sakhir Shaikh</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      <input type="text" class="form-control mt-2" id="otherTechInput" placeholder="Enter technician name" style="display: none;">
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold">Helper Name</label>
+                      <select class="form-select" id="helper" required onchange="toggleOtherHelper()">
+                        <option value="" selected disabled>-- Select Helper --</option>
+                        <option value="Vinay Dubey">Vinay Dubey</option>
+                        <option value="Ashish">Ashish</option>
+                        <option value="Abhay Singh">Abhay Singh</option>
+                        <option value="Servesh">Servesh</option>
+                        <option value="Sufiyan">Sufiyan</option>
+                        <option value="Sohel">Sohel</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      <input type="text" class="form-control mt-2" id="otherHelperInput" placeholder="Enter helper name" style="display: none;">
+                    </div>
                 </div>
                 <div class="row mb-4">
                     <div class="col-md-6">
@@ -527,7 +557,7 @@ function toggleOtherInput() {
         otherInput.value = ""; // Clear if hidden
     }
 }
-function toggleOtherInput(selectElement) {
+function toggleMachineTypeInput(selectElement) {
     // Find the text input right next to this select dropdown
     const otherInput = selectElement.parentElement.querySelector('.other-type-input');
     
@@ -605,6 +635,36 @@ function toggleOtherService(selectElement) {
         otherContainer.style.display = 'none'; // Hide the box
         otherInput.removeAttribute('required');
         otherInput.value = ''; 
+    }
+}
+
+function toggleOtherTech() {
+    const techSelect = document.getElementById('tech');
+    const otherTechInput = document.getElementById('otherTechInput');
+    
+    if (techSelect.value === 'Other') {
+        otherTechInput.style.display = 'block';
+        otherTechInput.setAttribute('required', 'true');
+        otherTechInput.focus();
+    } else {
+        otherTechInput.style.display = 'none';
+        otherTechInput.removeAttribute('required');
+        otherTechInput.value = '';
+    }
+}
+
+function toggleOtherHelper() {
+    const helperSelect = document.getElementById('helper');
+    const otherHelperInput = document.getElementById('otherHelperInput');
+    
+    if (helperSelect.value === 'Other') {
+        otherHelperInput.style.display = 'block';
+        otherHelperInput.setAttribute('required', 'true');
+        otherHelperInput.focus();
+    } else {
+        otherHelperInput.style.display = 'none';
+        otherHelperInput.removeAttribute('required');
+        otherHelperInput.value = '';
     }
 }
 
@@ -726,7 +786,12 @@ function processSubmission(fileData, fileType) {
 
         resolved: document.getElementById('resolved').value,
         paymentStatus: document.getElementById('paymentReceived').value,
-        tech: document.getElementById('tech').value,
+        tech: document.getElementById('tech').value === 'Other' ? document.getElementById('otherTechInput').value : document.getElementById('tech').value,
+        helper: document.getElementById('helper').value === 'Other' ? document.getElementById('otherHelperInput').value : document.getElementById('helper').value,
+        technicianNames: [
+            document.getElementById('tech').value === 'Other' ? document.getElementById('otherTechInput').value : document.getElementById('tech').value,
+            document.getElementById('helper').value === 'Other' ? document.getElementById('otherHelperInput').value : document.getElementById('helper').value
+        ].filter(Boolean).join(', '),
         customerSig: customerPad.isEmpty() ? "" : customerPad.toDataURL(),
         techSig: techPad.isEmpty() ? "" : techPad.toDataURL(),
         proofData: fileData,
