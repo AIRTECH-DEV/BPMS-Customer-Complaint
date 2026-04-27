@@ -47,7 +47,7 @@ function generateWarrantyCAMC() {
     info.company, // C: Company Name
     info.client,  // D: Contact Person
     lastEntry[14],// E: Service Type
-    lastEntry[4]  // F: Issue
+    lastEntry[12]  // F: Issue
   ]];
 
   // Recalculate last row after deletion to find the "Next to last" spot

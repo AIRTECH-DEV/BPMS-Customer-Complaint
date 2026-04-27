@@ -19,6 +19,75 @@
         canvas { border: 2px dashed #dee2e6; background: #fff; width: 100%; height: 150px; border-radius: 8px; }
         .machine-row { border-left: 4px solid #0d6efd; transition: all 0.2s; }
         .machine-row:hover { background-color: #f8f9fa !important; }
+
+        /* Global Status Badge Styles */
+        .global-status-box {
+            border-radius: 12px;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border: 2px solid;
+        }
+        .global-status-box.resolved {
+            background: linear-gradient(135deg, #d4edda, #7eadf1);
+            border-color: #28a745;
+        }
+        .global-status-box.pending {
+            background: linear-gradient(135deg, #fff3cd, #ffeeba);
+            border-color: #ffc107;
+        }
+        .global-status-icon {
+            font-size: 2.2rem;
+            line-height: 1;
+        }
+        .global-status-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6c757d;
+            margin-bottom: 2px;
+        }
+        .global-status-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+        .global-status-box.resolved .global-status-value { color: #155724; }
+        .global-status-box.pending .global-status-value { color: #856404; }
+        .global-status-note {
+            font-size: 0.78rem;
+            margin-top: 4px;
+        }
+        .global-status-box.resolved .global-status-note { color: #1e7e34; }
+        .global-status-box.pending .global-status-note { color: #997404; }
+
+        /* Machine summary on step 3 */
+        .machine-summary-card {
+            border-left: 4px solid #0d6efd;
+            border-radius: 8px;
+            background: #f8f9ff;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+        }
+        .machine-summary-card .badge-resolved {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
+        .machine-summary-card .badge-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -37,15 +106,14 @@
                     <p class="mb-0">Sr.No.53/6, "Saffron Avenue", A building,</p>
                     <p class="mb-0">Showroom No.1 & 2, Next to McDonald's</p>
                     <p class="mb-0">Bavdhan, Pune - 411021</p>
-                   <!-- <p class="mb-0">www.vakhariaairtech.com</p>-->
                     <p class="mb-0"> Email: airtech@vakhariaairtech.com</p>
                     <p class="mb-0 fw-bold mt-1">Mob No: +91 9049999081</p>
-                   
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 <div class="container" style="max-width: 900px;">
     <div class="card p-4 shadow-sm mb-4">
         <div class="row align-items-center">
@@ -57,8 +125,7 @@
                 <label class="form-label fw-bold">Report Type</label>
                 <select class="form-select border-primary" id="reportTypeSelect" onchange="updateHeader()">
                     <option value="" selected disabled>-- Choose Report Type --</option>
-                    <option value="Complaint Report">Complaint Report</option>
-                    <!--<option value="Service Report">Service Report</option>-->
+                    <option value="Complaint Report">Digital Complaint Report</option>
                 </select>
             </div>
         </div>
@@ -77,237 +144,242 @@
 
     <div class="card p-4 shadow-sm">
         <form id="complaintForm">
-            
-            <!--<div id="step1" class="step-container active">
-               <div class="row g-3">
-              <div class="col-md-12">
-              <label class="form-label fw-bold">Company/Client</label>
-              <select class="form-select" id="customerSelect" onchange="fetchDetails()" required>
-                <option value="">Loading...</option>
-              </select>
-           </div>-->
-           <div id="step1" class="step-container active">
-    <div class="row g-3">
-        <div class="col-md-12">
-            <label class="form-label fw-bold">Company/Client</label>
-            <select class="form-select" id="customerSelect" onchange="fetchDetails()" disabled required>
-                <option value="">-- Select Report Type Above First --</option>
-            </select>
-        </div>
-         
-        <div class="col-md-12">
-            <label class="form-label fw-bold">Site Address</label>
-            <textarea class="form-control" id="address" rows="2" readonly></textarea>
-        </div>
 
-        <div class="col-md-6">
-            <label class="form-label">Contact Person</label>
-            <input type="text" class="form-control" id="contact" readonly>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label">Phone</label>
-            <input type="text" class="form-control" id="phone" readonly>
-        </div>
-        
-        <div class="col-md-6">
-            <label class="form-label fw-bold">Service Type</label>
-            <select class="form-select" id="serviceType" required onchange="toggleOtherService(this);togglePaymentField();">
-                <option value="" selected disabled>-- Select Type --</option>
-                <option value="AMC">AMC</option>
-                <option value="In Warranty">In Warranty</option>
-                <option value="Paid">Paid</option>
-                <option value="Others">Others</option>
-            </select>
+            <!-- STEP 1 -->
+            <div id="step1" class="step-container active">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Company/Client</label>
+                        <select class="form-select" id="customerSelect" onchange="fetchDetails()" disabled required>
+                            <option value="">-- Select Report Type Above First --</option>
+                        </select>
+                    </div>
 
-            <div id="otherServiceContainer" class="mt-2" style="display: none;">
-             <input type="text" class="form-control" id="otherServiceInput" placeholder="Please specify service type">
-            </div>
-            <div class="invalid-feedback">
-        Please select a service type before continuing.
-    </div>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label">Machine Brand</label>
-            <input type="text" class="form-control" id="brand" readonly>
-        </div>
-        
-        <div class="col-md-12">
-            <label class="form-label fw-bold">Complaint Type</label>
-            <input type="text" class="form-control" id="complaintType" placeholder="e.g. Unit not cooling, Water leakage">
-        </div>
-    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Site Address</label>
+                        <textarea class="form-control" id="address" rows="2" readonly></textarea>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Contact Person</label>
+                        <input type="text" class="form-control" id="contact" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="phone" readonly>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Service Type</label>
+                        <select class="form-select" id="serviceType" required onchange="toggleOtherService(this);togglePaymentField();">
+                            <option value="" selected disabled>-- Select Type --</option>
+                            <option value="AMC">AMC</option>
+                            <option value="In Warranty">In Warranty</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Others">Others</option>
+                        </select>
+                        <div id="otherServiceContainer" class="mt-2" style="display: none;">
+                            <input type="text" class="form-control" id="otherServiceInput" placeholder="Please specify service type">
+                        </div>
+                        <div class="invalid-feedback">Please select a service type before continuing.</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Machine Brand</label>
+                        <input type="text" class="form-control" id="brand" readonly>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Complaint Type</label>
+                        <input type="text" class="form-control" id="complaintType" placeholder="e.g. Unit not cooling, Water leakage">
+                    </div>
+                </div>
                 <div class="mt-4 pt-3 border-top text-end">
                     <button type="button" class="btn btn-primary px-4 py-2" onclick="goToStep(2)">Continue to Machines &rarr;</button>
                 </div>
             </div>
 
+            <!-- STEP 2 -->
             <div id="step2" class="step-container">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="mb-0">Add Machines</h5>
                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="addMachine()">+ Add Machine</button>
                 </div>
-                
+
                 <div id="machineContainer">
                     <div class="row machine-row mb-3 p-3 border rounded bg-light mx-0 shadow-sm">
                         <div class="col-md-4 mb-2"><label class="small fw-bold">AC Location</label><input type="text" class="form-control machine-location"></div>
                         <div class="col-md-4 mb-2"><label class="small fw-bold">Serial No</label><input type="text" class="form-control machine-serial"></div>
-                        <div class="col-md-3 mb-2"><label class="small fw-bold">Model</label><input type="text" class="form-control machine-model"></div>
-                        <div class="col-md-3 mb-2"><label class="small fw-bold">Make</label> <input type="text" class="form-control machine-make"></div>
-                       <div class="col-md-3 mb-2">
-                       <label class="small fw-bold">Type</label>
-                       <select class="form-control machine-type" onchange="toggleMachineTypeInput(this)">
-                          <option value="" selected disabled>Select Type--</option>
-                          <option value="SAC">SAC</option>
-                          <option value="DAC">DAC</option>
-                          <option value="CAC">CAC</option>
-                          <option value="Tower">Tower</option>
-                          <option value="Other">Other</option>
-                       </select>
-                       <input type="text" class="form-control mt-2 other-type-input" placeholder="Specify type" style="display: none;">
-                       </div>
-                       <div class="col-md-3 mb-2">
-                         <label class="small fw-bold">Gas</label>
-                         <input type="text" class="form-control machine-gas">
-                       </div>
-                    <div class="col-md-3 mb-2">
-                       <label class="small fw-bold">Problem</label>
-                        <select class="form-control machine-problem" onchange="toggleOtherProblem(this)">
-                          <option value="" selected disabled>Select Problem</option>
-                          <option value="Gas leakage">Gas leakage</option>
-                          <option value="PCB required">PCB required</option>
-                          <option value="Moter Required">Moter Required</option>
-                          <option value="Drain pump">Drain pump</option>
-                          <option value="Capactitor">Capactitor</option>
-                          <option value="Contactor">Contactor</option>
-                          <option value="Compressor">Compressor</option>
-                          <option value="Other">Other</option>
-                        </select>
-                         <input type="text" class="form-control mt-2 other-problem-input" placeholder="Specify problem" style="display: none;">
-                     </div>
-                     <!-------------------------------->
-                    <div class="col-md-8 mb-3">
-                      <label for="problemStatus" class="form-label"><b>Problem Status</b></label>
-                     <select id="problemStatus" class="form-control" required>
-                        <option value="" disabled selected>-- Choose Status --</option>
-                       <option value="Resolved">Resolved</option>
-                       <option value="Pending">Pending</option>
-                     </select>
-                    </div>
-                     <!------------>
-                    <div class="col-md-8 mb-2">
-                       <label class="small fw-bold">Action Taken</label>
-                       <textarea class="form-control machine-action" rows="1"></textarea>
-                    </div>
-                        <div class="col-md-1 d-flex align-items-end mb-2"><button type="button" class="btn btn-outline-danger w-100" onclick="removeMachine(this)">&times;</button></div>
+                        <div class="col-md-3 mb-2"><label class="small fw-bold">Model</label><input type="text" class="form-control machine-model" oninput="this.value = this.value.toUpperCase()"></div>
+                        <div class="col-md-3 mb-2">
+                            <label class="small fw-bold">Make</label>
+                            <select class="form-control machine-make" onchange="toggleOtherMake(this)">
+                                <option value="" selected disabled>Select Make--</option>
+                                <option value="Daikin">Daikin</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <input type="text" class="form-control mt-2 other-make-input" placeholder="Specify make" style="display: none;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="small fw-bold">Type</label>
+                            <select class="form-control machine-type" onchange="toggleMachineTypeInput(this)">
+                                <option value="" selected disabled>Select Type--</option>
+                                <option value="SAC">SAC</option>
+                                <option value="DAC">DAC</option>
+                                <option value="CAC">CAC</option>
+                                <option value="Tower">Tower</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <input type="text" class="form-control mt-2 other-type-input" placeholder="Specify type" style="display: none;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="small fw-bold">Gas</label>
+                            <select class="form-control machine-gas" onchange="toggleOtherGas(this)">
+                                <option value="" selected disabled>Select Gas--</option>
+                                <option value="R32">R32</option>
+                                <option value="R410">R410</option>
+                                <option value="R22">R22</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <input type="text" class="form-control mt-2 other-gas-input" placeholder="Specify gas type" style="display: none;">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="small fw-bold">Problem</label>
+                            <select class="form-control machine-problem" onchange="toggleOtherProblem(this)">
+                                <option value="" selected disabled>Select Problem</option>
+                                <option value="Gas leakage">Gas leakage</option>
+                                <option value="PCB required">PCB required</option>
+                                <option value="Moter Required">Moter Required</option>
+                                <option value="Drain pump">Drain pump</option>
+                                <option value="Capactitor">Capactitor</option>
+                                <option value="Contactor">Contactor</option>
+                                <option value="Compressor">Compressor</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <input type="text" class="form-control mt-2 other-problem-input" placeholder="Specify problem" style="display: none;">
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label"><b>Machine Problem Status</b></label>
+                            <select class="form-control machine-status" required>
+                                <option value="" disabled selected>-- Choose Status --</option>
+                                <option value="Resolved">Resolved</option>
+                                <option value="Pending">Pending</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8 mb-2">
+                            <label class="small fw-bold">Action Taken</label>
+                            <textarea class="form-control machine-action" rows="1"></textarea>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end mb-2">
+                            <button type="button" class="btn btn-outline-danger w-100" onclick="removeMachine(this)">&times;</button>
+                        </div>
                     </div>
                 </div>
-<!--------------------------->
+
                 <div class="mt-4 pt-3 border-top d-flex justify-content-between">
                     <button type="button" class="btn btn-light" onclick="goToStep(1)">Back</button>
                     <button type="button" class="btn btn-primary px-4" onclick="goToStep(3)">Review & Sign &rarr;</button>
-                     
                 </div>
             </div>
 
+            <!-- STEP 3: FINAL REVIEW -->
             <div id="step3" class="step-container">
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Service Status</label>
-                        <select class="form-select" id="resolved" onchange="toggleResolvedDetails();togglePaymentField();">
-                            <option value="Yes">Complaint Resolved - Yes</option>
-                            <option value="No" selected>Needs Resolution - No</option>
-                        </select>
-                    </div>
 
-                    <div class="col-md-6 mb-3" id="paymentReceivedContainer" style="display: none;">
-     <label class="form-label fw-bold">Payment Received?</label>
-    <select class="form-select" id="paymentReceived">
-        <option value="" selected disabled>-- Select Payment Status --</option>
-        <option value="Yes">Yes</option>
-        <option value="Pending">Pending</option>
-        <option value="No">No</option>
-    </select>
-</div>
-                    <div class="col-md-6" id="unresolvedDetailDiv">
-                        <label class="form-label fw-bold">Issue/Requirement</label>
-                        <select class="form-select" id="unresolvedReason" onchange="toggleOtherInput()">
-                            <option value="">-- Choose Issue --</option>
-                            <option>Gas Leakage</option>
-                            <option>PCB Required</option>
-                            <option>Moter Required</option>
-                            <option>Drain pump</option>
-                            <option>Capacitor</option>
-                            <option>Contactor</option>
-                            <option>Compressor</option>
-                            <option>Other</option>
-                        </select>
+                <!-- ===== GLOBAL STATUS SECTION ===== -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold d-block mb-2">Overall Complaint Status</label>
+                    <div id="globalStatusBox" class="global-status-box pending">
+                        <div class="global-status-icon" id="globalStatusIcon">⏳</div>
+                        <div>
+                            <div class="global-status-label">Global Status (Auto-computed)</div>
+                            <div class="global-status-value" id="globalStatusValue">Pending</div>
+                            <div class="global-status-note" id="globalStatusNote">One or more machines still have pending issues</div>
+                        </div>
                     </div>
+                    <!-- Hidden input to keep payment field logic working -->
+                    <input type="hidden" id="resolved" value="No">
                 </div>
 
-                <div class="mb-4" id="otherReasonDiv" style="display: none;">
-                    <label class="form-label">Describe "Other" Requirement</label>
-                    <input type="text" class="form-control" id="otherReasonText" placeholder="Type details here...">
+                <!-- ===== MACHINE SUMMARY ===== -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold mb-2">Machine Summary</label>
+                    <div id="machineSummaryContainer"></div>
                 </div>
+
+                <!-- ===== PAYMENT RECEIVED (only for Paid + Resolved) ===== -->
+                <div class="col-md-6 mb-3" id="paymentReceivedContainer" style="display: none;">
+                    <label class="form-label fw-bold">Payment Received?</label>
+                    <select class="form-select" id="paymentReceived">
+                        <option value="" selected disabled>-- Select Payment Status --</option>
+                        <option value="Yes">Yes</option>
+                        <option value="Pending">Pending</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <!-- ===== PAYMENT PROOF ===== -->
                 <div class="row mb-4">
-                <div class="col-md-12">
-                     <label class="form-label fw-bold">Upload Payment Proof (Image/PDF)</label>
-                    <input type="file" class="form-control" id="paymentProof" accept="image/*,.pdf">
-                     <div class="form-text text-muted">Maximum size: 5MB (Optional if AMC/Warranty)</div>
-                </div>
-               </div>
-                  <div class="row mb-4">
-                    <div class="col-md-6">
-                      <label class="form-label fw-bold">Technician Name</label>
-                      <select class="form-select" id="tech" required onchange="toggleOtherTech()">
-                        <option value="" selected disabled>-- Select Technician --</option>
-                        <option value="prasanna Khamkar">prasanna Khamkar</option>
-                        <option value="Ishwar jaybhaye">Ishwar jaybhaye</option>
-                        <option value="Umesh Sode">Umesh Sode</option>
-                        <option value="Thorat chandrakant">Thorat chandrakant</option>
-                        <option value="Kiran Polekar">Kiran Polekar</option>
-                        <option value="bhushan karekar">bhushan karekar</option>
-                        <option value="Rajiv Kumar">Rajiv Kumar</option>
-                        <option value="Aman Khan">Aman Khan</option>
-                        <option value="Rajbhadur Pal">Rajbhadur Pal</option>
-                        <option value="Sadik Sayyed">Sadik Sayyed</option>
-                        <option value="Mukesh Bhingrdive">Mukesh Bhingrdive</option>
-                        <option value="Sakhir Shaikh">Sakhir Shaikh</option>
-                        <option value="Other">Other</option>
-                      </select>
-                      <input type="text" class="form-control mt-2" id="otherTechInput" placeholder="Enter technician name" style="display: none;">
-                    </div>
-                    <div class="col-md-6">
-                      <label class="form-label fw-bold">Helper Name</label>
-                      <select class="form-select" id="helper" required onchange="toggleOtherHelper()">
-                        <option value="" selected disabled>-- Select Helper --</option>
-                        <option value="Vinay Dubey">Vinay Dubey</option>
-                        <option value="Ashish">Ashish</option>
-                        <option value="Abhay Singh">Abhay Singh</option>
-                        <option value="Servesh">Servesh</option>
-                        <option value="Sufiyan">Sufiyan</option>
-                        <option value="Sohel">Sohel</option>
-                        <option value="Other">Other</option>
-                      </select>
-                      <input type="text" class="form-control mt-2" id="otherHelperInput" placeholder="Enter helper name" style="display: none;">
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Upload Payment Proof (Image/PDF)</label>
+                        <input type="file" class="form-control" id="paymentProof" accept="image/*,.pdf">
+                        <div class="form-text text-muted">Maximum size: 5MB (Optional if AMC/Warranty)</div>
                     </div>
                 </div>
+
+                <!-- ===== TECHNICIAN & HELPER ===== -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Technician Name</label>
+                        <select class="form-select" id="tech" required onchange="toggleOtherTech()">
+                            <option value="" selected disabled>-- Select Technician --</option>
+                            <option value="Prasanna Khamkar">Prasanna Khamkar</option>
+                            <option value="Ishwar Jaybhaye">Ishwar Jaybhaye</option>
+                            <option value="Umesh Sode">Umesh Sode</option>
+                            <option value="Thorat Chandrakant">Thorat Chandrakant</option>
+                            <option value="Kiran Polekar">Kiran Polekar</option>
+                            <option value="Bhushan Karekar">Bhushan Karekar</option>
+                            <option value="Rajiv Kumar">Rajiv Kumar</option>
+                            <option value="Aman Khan">Aman Khan</option>
+                            <option value="Rajbhadur Pal">Rajbhadur Pal</option>
+                            <option value="Sadik Sayyed">Sadik Sayyed</option>
+                            <option value="Mukesh Bhingrdive">Mukesh Bhingrdive</option>
+                            <option value="Sakhir Shaikh">Sakhir Shaikh</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <input type="text" class="form-control mt-2" id="otherTechInput" placeholder="Enter technician name" style="display: none;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Helper Name</label>
+                        <select class="form-select" id="helper" required onchange="toggleOtherHelper()">
+                            <option value="" selected disabled>-- Select Helper --</option>
+                            <option value="Vinay Dubey">Vinay Dubey</option>
+                            <option value="Ashish">Ashish</option>
+                            <option value="Abhay Singh">Abhay Singh</option>
+                            <option value="Servesh">Servesh</option>
+                            <option value="Sufiyan">Sufiyan</option>
+                            <option value="Sohel">Sohel</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <input type="text" class="form-control mt-2" id="otherHelperInput" placeholder="Enter helper name" style="display: none;">
+                    </div>
+                </div>
+
+                <!-- ===== SIGNATURES ===== -->
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <label class="small fw-bold text-muted mb-2">Customer Signature</label>
                         <canvas id="customerCanvas"></canvas>
                         <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none" onclick="customerPad.clear()">Clear</button>
-                        <!--<button type="button" id="lockCustBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleLockCust()">Lock</button>-->
-                       <button type="button" id="lockCustBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleLockCust()">
-                       <i class="bi bi-unlock" id="custIcon"></i> Lock
-                      </button>
+                        <button type="button" id="lockCustBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleLockCust()">
+                            <i class="bi bi-unlock" id="custIcon"></i> Lock
+                        </button>
                     </div>
                     <div class="col-md-6">
                         <label class="small fw-bold text-muted mb-2">Technician Signature</label>
                         <canvas id="techCanvas"></canvas>
                         <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none" onclick="techPad.clear()">Clear</button>
-                        <!--<button type="button" id="lockTechBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleLockTech()">Lock Signature</button>-->
                         <button type="button" id="lockTechBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleLockTech()">
-                          <i class="bi bi-unlock" id="techIcon"></i> Lock
+                            <i class="bi bi-unlock" id="techIcon"></i> Lock
                         </button>
                     </div>
                 </div>
@@ -322,326 +394,314 @@
     </div>
 </div>
 
-<!---->
+<!-- SUCCESS OVERLAY -->
 <div id="success-overlay">
-  <div class="success-card">
-    <h1 id="msg-text"></h1>
-    <button onclick="resetForm()" 
-            style="padding: 12px 30px; font-size: 20px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 10px;">
-      OK
-    </button>
-  </div>
+    <div class="success-card">
+        <h1 id="msg-text"></h1>
+        <button onclick="resetForm()"
+                style="padding: 12px 30px; font-size: 20px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 10px;">
+            OK
+        </button>
+    </div>
 </div>
+
 <style>
-  /* This makes the message big and centers it */
 #success-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8); /* Dims the screen */
-  display: none; /* Hidden until success */
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); display: none;
+    justify-content: center; align-items: center; z-index: 9999;
 }
-
 .success-card {
-  background: white;
-  padding: 40px;
-  border-radius: 20px;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    background: white; padding: 40px; border-radius: 20px;
+    text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
-
-.success-card h1 {
-  font-size: 48px; /* Extra large text */
-  color: #2ecc71;
-  margin-bottom: 20px;
-}
+.success-card h1 { font-size: 48px; color: #2ecc71; margin-bottom: 20px; }
 </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-<script>
-    let customerPad, techPad;
 
-    
-  // 1. Move dropdown logic to a separate function
-  function loadActiveCustomers() {
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+<script>
+let customerPad, techPad;
+
+function loadActiveCustomers() {
     let select = document.getElementById('customerSelect');
     select.innerHTML = '<option value="">Loading active complaints...</option>';
-
     google.script.run
-      .withSuccessHandler(list => {
-        select.innerHTML = '<option value="">-- Choose --</option>';
-        list.forEach(name => {
-          let opt = document.createElement('option');
-          opt.value = name;
-          opt.innerHTML = name;
-          select.appendChild(opt);
-        });
-      })
-      .getCustomerList();
-  }
+        .withSuccessHandler(list => {
+            select.innerHTML = '<option value="">-- Choose --</option>';
+            list.forEach(name => {
+                let opt = document.createElement('option');
+                opt.value = name;
+                opt.innerHTML = name;
+                select.appendChild(opt);
+            });
+        })
+        .getCustomerList();
+}
 
-  window.onload = () => {
+window.onload = () => {
     customerPad = new SignaturePad(document.getElementById('customerCanvas'));
     techPad = new SignaturePad(document.getElementById('techCanvas'));
-    
-  
-    // Call the function on load
-    loadActiveCustomers(); 
-  };
+    loadActiveCustomers();
+};
 
-  function fetchDetails() {
+function fetchDetails() {
     let name = document.getElementById('customerSelect').value;
-    if(!name) return;
+    if (!name) return;
     google.script.run
-      .withSuccessHandler(data => {
-        if(data) {
-          document.getElementById('address').value = data.address;
-          document.getElementById('contact').value = data.contact;
-          document.getElementById('phone').value = data.phone;
-          document.getElementById('brand').value = data.brand;
-          document.getElementById('complaintType').value = data.complaintType;
-        }
-      })
-      .getCustomerDetails(name);
-  }
+        .withSuccessHandler(data => {
+            if (data) {
+                document.getElementById('address').value = data.address;
+                document.getElementById('contact').value = data.contact;
+                document.getElementById('phone').value = data.phone;
+                document.getElementById('brand').value = data.brand;
+                document.getElementById('complaintType').value = data.complaintType;
+            }
+        })
+        .getCustomerDetails(name);
+}
 
-    // Logic for the Progress Bar & Steps
-    function goToStep(step) {
-      const serviceType = document.getElementById('serviceType');
-      const reportType = document.getElementById('reportTypeSelect');
-     
-    
-    // Check if the service type has a value
-    if (serviceType.value === "" || serviceType.value === null) {
-        // Add the Bootstrap red border
-        serviceType.classList.add('is-invalid');
-        
-        // Focus the element so the user knows where the error is
-        serviceType.focus();
-        
-        // Stop the function here so it doesn't move to the next page
-        return false; 
+// ============================================================
+// GLOBAL STATUS COMPUTATION
+// Called every time user navigates to step 3
+// ============================================================
+function computeGlobalStatus() {
+    const rows = document.querySelectorAll('.machine-row');
+    let allResolved = true;
+    let machineData = [];
 
+    rows.forEach((row, idx) => {
+        const statusSelect = row.querySelector('.machine-status');
+        const status = statusSelect ? statusSelect.value : '';
+        const location = row.querySelector('.machine-location').value || ('Machine ' + (idx + 1));
+        const problem = row.querySelector('.machine-problem').value || '—';
+        const otherProb = row.querySelector('.other-problem-input').value;
+        const finalProblem = (problem === 'Other') ? otherProb : problem;
+
+        if (status !== 'Resolved') allResolved = false;
+        machineData.push({ location, problem: finalProblem, status });
+    });
+
+    const globalStatus = allResolved ? 'Resolved' : 'Pending';
+
+    // Update hidden input (used by togglePaymentField)
+    // document.getElementById('resolved').value = allResolved ? 'Yes' : 'No';
+    document.getElementById('resolved').value = allResolved ? 'Resolved' : 'Pending';
+
+    // Update visual badge
+    const box = document.getElementById('globalStatusBox');
+    const valueEl = document.getElementById('globalStatusValue');
+    const noteEl = document.getElementById('globalStatusNote');
+    const iconEl = document.getElementById('globalStatusIcon');
+
+    if (allResolved) {
+        box.className = 'global-status-box resolved';
+        valueEl.textContent = 'Resolved';
+        noteEl.textContent = 'All machines have been successfully resolved';
+        iconEl.textContent = '✅';
+    } else {
+        box.className = 'global-status-box pending';
+        valueEl.textContent = 'Pending';
+        noteEl.textContent = 'One or more machines still have pending issues';
+        iconEl.textContent = '⏳';
     }
 
-    // If it's valid, remove the red border (in case it was there from a previous click)
+    // Build machine summary cards
+    const summaryContainer = document.getElementById('machineSummaryContainer');
+    summaryContainer.innerHTML = '';
+    machineData.forEach((m, idx) => {
+        const isResolved = m.status === 'Resolved';
+        const badgeClass = isResolved ? 'badge-resolved' : 'badge-pending';
+        const badgeIcon = isResolved ? '✅' : '⏳';
+        summaryContainer.innerHTML += `
+            <div class="machine-summary-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-bold" style="color:#0d6efd;">📍 ${m.location || 'Machine ' + (idx + 1)}</span>
+                        <span class="text-muted ms-2" style="font-size:0.85rem;">Problem: ${m.problem || '—'}</span>
+                    </div>
+                    <span class="${badgeClass}">${badgeIcon} ${m.status || 'Not Set'}</span>
+                </div>
+            </div>`;
+    });
+
+    // Trigger payment field visibility
+    togglePaymentField();
+}
+
+// ============================================================
+// STEP NAVIGATION
+// ============================================================
+function goToStep(step) {
+    const serviceType = document.getElementById('serviceType');
+    const reportType = document.getElementById('reportTypeSelect');
+
+    if (step > 1 && (serviceType.value === "" || serviceType.value === null)) {
+        serviceType.classList.add('is-invalid');
+        serviceType.focus();
+        return false;
+    }
     serviceType.classList.remove('is-invalid');
 
-    // --- NEW LOGIC: Lock Report Type when moving to Step 2 ---
     if (step >= 2) {
-        reportType.disabled = true; // Prevents editing
-        reportType.classList.add('bg-light'); // Optional: gives it a "readonly" look
+        reportType.disabled = true;
+        reportType.classList.add('bg-light');
     }
 
-        // Validation: Ensure report type is selected before moving from Step 1
-        if (step > 1 && !document.getElementById('reportTypeSelect').value) {
-            alert("Please select a Report Type from the dropdown first.");
-            return;
-        }
-
-        document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
-        document.getElementById('step' + step).classList.add('active');
-
-        // Update Progress Bar
-        const bar = document.getElementById('progressBar');
-        const labels = ['33%', '66%', '100%'];
-        bar.style.width = labels[step - 1];
-
-        // Update Labels color
-        document.getElementById('label2').classList.toggle('text-primary', step >= 2);
-        document.getElementById('label3').classList.toggle('text-primary', step >= 3);
+    if (step > 1 && !document.getElementById('reportTypeSelect').value) {
+        alert("Please select a Report Type from the dropdown first.");
+        return;
     }
 
-    /*function updateHeader() {
-        const val = document.getElementById('reportTypeSelect').value;
-        document.getElementById('displayHeader').innerText = val;
-    }*/
-    function updateHeader() {
+    // When going to step 3, compute global status from machine rows
+    if (step === 3) {
+        computeGlobalStatus();
+    }
+
+    document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+    document.getElementById('step' + step).classList.add('active');
+
+    const bar = document.getElementById('progressBar');
+    const labels = ['33%', '66%', '100%'];
+    bar.style.width = labels[step - 1];
+
+    document.getElementById('label2').classList.toggle('text-primary', step >= 2);
+    document.getElementById('label3').classList.toggle('text-primary', step >= 3);
+}
+
+function updateHeader() {
     const reportType = document.getElementById('reportTypeSelect').value;
     const customerDropdown = document.getElementById('customerSelect');
     const displayHeader = document.getElementById('displayHeader');
 
     if (reportType !== "") {
-        // 1. Update the Header Title
         displayHeader.innerText = reportType;
-
-        // 2. UNLOCK the Company/Client dropdown
         customerDropdown.disabled = false;
-
-        // 3. Change the placeholder text to guide the user
         customerDropdown.options[0].text = "-- Now Select Company/Client --";
-        
-        // 4. (Optional) Highlight the field to show it's active
         customerDropdown.classList.add('border-success');
-        
-        // If you have a function to load the names from the Sheet, call it here:
-        // loadCustomerList(); 
     }
 }
 
-    // Existing functions for machines and logic...
-    function addMachine() {
-        const container = document.getElementById('machineContainer');
-        const row = document.querySelector('.machine-row').cloneNode(true);
-        row.querySelectorAll('input').forEach(i => i.value = '');
-        // Reset all dropdowns (Type, Problem, and your new Resolved field)
-        row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
-        container.appendChild(row);
-    }
-
-    function removeMachine(btn) {
-        if(document.querySelectorAll('.machine-row').length > 1) btn.closest('.machine-row').remove();
-    }
-
-    
-    function toggleResolvedDetails() {
-    const resolvedSelect = document.getElementById('resolved');
-    const unresolvedDiv = document.getElementById('unresolvedDetailDiv');
-    const reasonSelect = document.getElementById('unresolvedReason');
-    const otherDiv = document.getElementById('otherReasonDiv');
-    const otherInput = document.getElementById('otherReasonText');
-
-    if (resolvedSelect.value === "Yes") {
-        // Hide and Reset everything
-        unresolvedDiv.style.display = "none";
-        otherDiv.style.display = "none";
-        
-        // Clear values so they don't submit
-        reasonSelect.value = "";
-        otherInput.value = "";
-        
-        // Disable them for extra safety
-        reasonSelect.disabled = true;
-        otherInput.disabled = true;
-    } else {
-        // Show the dropdown if "No" is selected
-        unresolvedDiv.style.display = "block";
-        reasonSelect.disabled = false;
-        
-        // Check if "Other" was already selected to show the text box
-        toggleOtherInput();
-    }
+// ============================================================
+// MACHINE ROW MANAGEMENT
+// ============================================================
+function addMachine() {
+    const container = document.getElementById('machineContainer');
+    const row = document.querySelector('.machine-row').cloneNode(true);
+    row.querySelectorAll('input').forEach(i => i.value = '');
+    row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+    row.querySelectorAll('.other-type-input, .other-problem-input, .other-make-input, .other-gas-input').forEach(el => {
+        el.style.display = 'none';
+        el.value = '';
+    });
+    // Re-apply event handlers to the model field in the cloned row
+    const modelInput = row.querySelector('.machine-model');
+    modelInput.oninput = function() { this.value = this.value.toUpperCase(); };
+    container.appendChild(row);
 }
 
+function removeMachine(btn) {
+    if (document.querySelectorAll('.machine-row').length > 1)
+        btn.closest('.machine-row').remove();
+}
+
+// ============================================================
+// PAYMENT FIELD TOGGLE
+// Uses hidden #resolved input (set by computeGlobalStatus)
+// ============================================================
 function togglePaymentField() {
-    // Get the values from both dropdowns
     const serviceType = document.getElementById('serviceType').value;
     const serviceStatus = document.getElementById('resolved').value;
     const paymentContainer = document.getElementById('paymentReceivedContainer');
 
-    // Show only if Service Type is 'Paid' AND Status is 'Yes'
-    if (serviceType === 'Paid' && serviceStatus === 'Yes') {
+    if (serviceType === 'Paid' && serviceStatus === 'Resolved') {
         paymentContainer.style.display = 'block';
         document.getElementById('paymentReceived').required = true;
     } else {
         paymentContainer.style.display = 'none';
         document.getElementById('paymentReceived').required = false;
-        document.getElementById('paymentReceived').value = ''; // Clear selection if hidden
+        document.getElementById('paymentReceived').value = '';
     }
 }
-function toggleOtherInput() {
-    const reasonSelect = document.getElementById('unresolvedReason');
-    const otherDiv = document.getElementById('otherReasonDiv');
-    const otherInput = document.getElementById('otherReasonText');
 
-    if (reasonSelect.value === "Other" && !reasonSelect.disabled) {
-        otherDiv.style.display = "block";
-        otherInput.disabled = false;
-    } else {
-        otherDiv.style.display = "none";
-        otherInput.disabled = true;
-        otherInput.value = ""; // Clear if hidden
-    }
-}
+// ============================================================
+// MACHINE TYPE / PROBLEM TOGGLES
+// ============================================================
 function toggleMachineTypeInput(selectElement) {
-    // Find the text input right next to this select dropdown
     const otherInput = selectElement.parentElement.querySelector('.other-type-input');
-    
     if (selectElement.value === 'Other') {
         otherInput.style.display = 'block';
         otherInput.setAttribute('required', 'true');
     } else {
         otherInput.style.display = 'none';
-        otherInput.value = ''; // Clear it if they change their mind
+        otherInput.value = '';
         otherInput.removeAttribute('required');
     }
 }
+
 function toggleOtherProblem(selectElement) {
-    // Finds the specific text box for the problem field
     const otherInput = selectElement.parentElement.querySelector('.other-problem-input');
-    
     if (selectElement.value === 'Other') {
         otherInput.style.display = 'block';
     } else {
         otherInput.style.display = 'none';
-        otherInput.value = ''; // Clears the text if they change selection
+        otherInput.value = '';
     }
 }
-document.getElementById('serviceType').addEventListener('change', function() {
-    if (this.value !== "") {
-        this.classList.remove('is-invalid');
-    }
-});
-// Add this at the bottom of your <script> section in index.html
-let isProcessing = false;
-document.getElementById('complaintForm').addEventListener('submit', function(e) {
-    e.preventDefault(); // Stops the page from refreshing
-    if (isProcessing) return;
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    isProcessing = true; // Set the lock
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting...';
 
-    
-    // SHOW THE SUCCESS MESSAGE IMMEDIATELY (Don't wait for the server)
-    const overlay = document.getElementById('success-overlay');
-    const msgH2 = document.getElementById('msg-text');
-    
-    msgH2.innerText = "REPORT SUBMITTED SUCCESSFULLY!";
-    overlay.style.display = 'flex';
-    
-   // processSubmission();
-    /***/
-
-    const fileInput = document.getElementById('paymentProof');
-    const file = fileInput.files[0];
-
-    // Check if there's a file to upload
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const base64Data = e.target.result.split(',')[1];
-            processSubmission(base64Data, file.type);
-        };
-        reader.readAsDataURL(file);
+function toggleOtherGas(selectElement) {
+    const otherInput = selectElement.parentElement.querySelector('.other-gas-input');
+    if (selectElement.value === 'Other') {
+        otherInput.style.display = 'block';
     } else {
-        processSubmission(null, null);
+        otherInput.style.display = 'none';
+        otherInput.value = '';
     }
-});
+}
+
+function capitalizeName(name) {
+    if (!name) return '';
+    return name
+        .trim()
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+}
+
+function toggleOtherMake(selectElement) {
+    const otherInput = selectElement.parentElement.querySelector('.other-make-input');
+    if (selectElement.value === 'Other') {
+        otherInput.style.display = 'block';
+    } else {
+        otherInput.style.display = 'none';
+        otherInput.value = '';
+    }
+}
+
 function toggleOtherService(selectElement) {
     const otherContainer = document.getElementById('otherServiceContainer');
     const otherInput = document.getElementById('otherServiceInput');
-    
-    // Check if the selected value is exactly "Others"
     if (selectElement.value === 'Others') {
-        otherContainer.style.display = 'block'; // Show the box
+        otherContainer.style.display = 'block';
         otherInput.setAttribute('required', 'true');
-        otherInput.focus(); 
+        otherInput.focus();
     } else {
-        otherContainer.style.display = 'none'; // Hide the box
+        otherContainer.style.display = 'none';
         otherInput.removeAttribute('required');
-        otherInput.value = ''; 
+        otherInput.value = '';
     }
 }
 
+document.getElementById('serviceType').addEventListener('change', function () {
+    if (this.value !== "") this.classList.remove('is-invalid');
+});
+
+// ============================================================
+// TECHNICIAN / HELPER TOGGLES
+// ============================================================
 function toggleOtherTech() {
     const techSelect = document.getElementById('tech');
     const otherTechInput = document.getElementById('otherTechInput');
-    
     if (techSelect.value === 'Other') {
         otherTechInput.style.display = 'block';
         otherTechInput.setAttribute('required', 'true');
@@ -656,7 +716,6 @@ function toggleOtherTech() {
 function toggleOtherHelper() {
     const helperSelect = document.getElementById('helper');
     const otherHelperInput = document.getElementById('otherHelperInput');
-    
     if (helperSelect.value === 'Other') {
         otherHelperInput.style.display = 'block';
         otherHelperInput.setAttribute('required', 'true');
@@ -668,103 +727,121 @@ function toggleOtherHelper() {
     }
 }
 
-// 1. Status tracker for both pads
-let padStatus = {
-    customer: false,
-    tech: false
-};
+// ============================================================
+// SIGNATURE LOCK
+// ============================================================
+let padStatus = { customer: false, tech: false };
 
-// 2. The main toggle function
 function togglePadLock(type) {
-    // Identify which pad and elements we are touching
     const isCustomer = (type === 'customer');
     const padInstance = isCustomer ? customerPad : techPad;
     const buttonId = isCustomer ? 'lockCustBtn' : 'lockTechBtn';
     const iconId = isCustomer ? 'custIcon' : 'techIcon';
-    
     const lockBtn = document.getElementById(buttonId);
     const icon = document.getElementById(iconId);
-    
+
     if (!padStatus[type]) {
-        // ACTION: LOCK
-        padInstance.off(); // Disables drawing
-        icon.className = "bi bi-lock-fill"; // Changes icon to locked
+        padInstance.off();
+        icon.className = "bi bi-lock-fill";
         lockBtn.classList.replace('btn-outline-secondary', 'btn-warning');
         lockBtn.innerHTML = `<i class="bi bi-lock-fill" id="${iconId}"></i> Unlock`;
         padStatus[type] = true;
     } else {
-        // ACTION: UNLOCK
-        padInstance.on(); // Enables drawing
-        icon.className = "bi bi-unlock"; // Changes icon to unlocked
+        padInstance.on();
+        icon.className = "bi bi-unlock";
         lockBtn.classList.replace('btn-warning', 'btn-outline-secondary');
         lockBtn.innerHTML = `<i class="bi bi-unlock" id="${iconId}"></i> Lock`;
         padStatus[type] = false;
     }
 }
 
-// 3. Helper functions for the HTML buttons
 function toggleLockCust() { togglePadLock('customer'); }
 function toggleLockTech() { togglePadLock('tech'); }
 
+// ============================================================
+// RESET
+// ============================================================
 function resetForm() {
-  // Replace the URL below with your actual Web App URL
-  const webAppUrl = "https://script.google.com/a/macros/vakhariaairtech.com/s/AKfycbzoFQC0O1oZvnMMTuTDSuskd_-i2aiClgeR22kFOTOp2axpQEzqOzy0hFJA8qpWPUBs/exec";
-  
-  // This redirects the user to a fresh link in the same tab
-  window.location.href = webAppUrl;
+    const webAppUrl = "https://script.google.com/a/macros/vakhariaairtech.com/s/AKfycbzoFQC0O1oZvnMMTuTDSuskd_-i2aiClgeR22kFOTOp2axpQEzqOzy0hFJA8qpWPUBs/exec";
+    window.location.href = webAppUrl;
 }
 
-<!--------------->
-function processSubmission(fileData, fileType) {
-  const statusField = document.getElementById('problemStatus');
-    if (!statusField.value) {
-        alert("Please select a Problem Status!");
-        statusField.focus(); // This moves the user's cursor to the missing field
-        return; // This stops the submission entirely
+// ============================================================
+// FORM SUBMIT
+// ============================================================
+let isProcessing = false;
+
+document.getElementById('complaintForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (isProcessing) return;
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    isProcessing = true;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting...';
+
+    const overlay = document.getElementById('success-overlay');
+    const msgH2 = document.getElementById('msg-text');
+    msgH2.innerText = "REPORT SUBMITTED SUCCESSFULLY!";
+    overlay.style.display = 'flex';
+
+    const fileInput = document.getElementById('paymentProof');
+    const file = fileInput.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const base64Data = e.target.result.split(',')[1];
+            processSubmission(base64Data, file.type);
+        };
+        reader.readAsDataURL(file);
+    } else {
+        processSubmission(null, null);
     }
-    /***************/
+});
+
+function processSubmission(fileData, fileType) {
     const rows = document.querySelectorAll('.machine-row');
-    
-    // 1. Create arrays for the new fields
     const locations = [], serials = [], models = [], makes = [], gases = [], actions = [], types = [], problems = [], statuses = [];
 
     rows.forEach(row => {
         locations.push(row.querySelector('.machine-location').value);
         serials.push(row.querySelector('.machine-serial').value);
         models.push(row.querySelector('.machine-model').value);
-        makes.push(row.querySelector('.machine-make').value);
-        gases.push(row.querySelector('.machine-gas').value);
+        
+        let makeVal = row.querySelector('.machine-make').value;
+        const otherMake = row.querySelector('.other-make-input').value;
+        makes.push(makeVal === "Other" ? otherMake : makeVal);
+        
+        let gasVal = row.querySelector('.machine-gas').value;
+        const otherGas = row.querySelector('.other-gas-input').value;
+        gases.push(gasVal === "Other" ? otherGas : gasVal);
+        
         actions.push(row.querySelector('.machine-action').value);
 
-        // Dropdown + "Other" logic for Type
         let typeVal = row.querySelector('.machine-type').value;
         const otherType = row.querySelector('.other-type-input').value;
         types.push(typeVal === "Other" ? otherType : typeVal);
 
-        // Dropdown + "Other" logic for Problem
         let probVal = row.querySelector('.machine-problem').value;
         const otherProb = row.querySelector('.other-problem-input').value;
         problems.push(probVal === "Other" ? otherProb : probVal);
 
-        const statusValue = row.querySelector('#problemStatus').value;
-        
+        const statusValue = row.querySelector('.machine-status').value;
         if (!statusValue) {
             alert("Please select a Problem Status for all machines!");
-            throw new Error("Missing Status"); // Stops the process
+            throw new Error("Missing Status");
         }
         statuses.push(statusValue);
     });
 
-    // 2. Existing "Other" logic for Service & Issue
-    const finalIssue = (document.getElementById('unresolvedReason').value === "Other") ? 
-                       document.getElementById('otherReasonText').value : document.getElementById('unresolvedReason').value;
-    
-    const finalServiceType = (document.getElementById('serviceType').value === "Others") ? 
-                             document.getElementById('otherServiceInput').value : document.getElementById('serviceType').value;
+    const finalServiceType = (document.getElementById('serviceType').value === "Others") ?
+        document.getElementById('otherServiceInput').value :
+        document.getElementById('serviceType').value;
 
-    // 3. Build the updated formData object
+    // Global status is read from hidden input set by computeGlobalStatus
+    const globalStatus = statuses.every(s => s === 'Resolved') ? 'Resolved' : 'Pending';
+
     const formData = {
-        issue: finalIssue,
         reportType: document.getElementById('reportTypeSelect').value,
         company: document.getElementById('customerSelect').value,
         address: document.getElementById('address').value,
@@ -773,8 +850,6 @@ function processSubmission(fileData, fileType) {
         brand: document.getElementById('brand').value,
         serviceType: finalServiceType,
         complaintType: document.getElementById('complaintType').value,
-        
-        // Join arrays into strings for Google Sheets
         location: locations.join(', '),
         serial: serials.join(', '),
         model: models.join(', '),
@@ -783,60 +858,41 @@ function processSubmission(fileData, fileType) {
         type: types.join(', '),
         problem: problems.join(', '),
         actionTaken: actions.join(', '),
-
-        resolved: document.getElementById('resolved').value,
+        problemStatus: statuses.join(', '),
+        resolved: globalStatus,            // global status sent to sheet
+        issue: '',                         // removed from UI, kept for sheet compatibility
         paymentStatus: document.getElementById('paymentReceived').value,
-        tech: document.getElementById('tech').value === 'Other' ? document.getElementById('otherTechInput').value : document.getElementById('tech').value,
-        helper: document.getElementById('helper').value === 'Other' ? document.getElementById('otherHelperInput').value : document.getElementById('helper').value,
+        tech: capitalizeName(document.getElementById('tech').value === 'Other' ?
+            document.getElementById('otherTechInput').value :
+            document.getElementById('tech').value),
+        helper: capitalizeName(document.getElementById('helper').value === 'Other' ?
+            document.getElementById('otherHelperInput').value :
+            document.getElementById('helper').value),
         technicianNames: [
-            document.getElementById('tech').value === 'Other' ? document.getElementById('otherTechInput').value : document.getElementById('tech').value,
-            document.getElementById('helper').value === 'Other' ? document.getElementById('otherHelperInput').value : document.getElementById('helper').value
+            capitalizeName(document.getElementById('tech').value === 'Other' ?
+                document.getElementById('otherTechInput').value :
+                document.getElementById('tech').value),
+            capitalizeName(document.getElementById('helper').value === 'Other' ?
+                document.getElementById('otherHelperInput').value :
+                document.getElementById('helper').value)
         ].filter(Boolean).join(', '),
         customerSig: customerPad.isEmpty() ? "" : customerPad.toDataURL(),
         techSig: techPad.isEmpty() ? "" : techPad.toDataURL(),
         proofData: fileData,
         proofType: fileType,
-        problemStatus: statuses.join(", "), // Joins them as "Resolved, Pending"
     };
-   // 4. Send data to Google Script
-    const payload = JSON.stringify(formData); // Optional: makes data safer to send
-    
-  /*  google.script.run
-        .withSuccessHandler(res => {
-            alert("✅ " + res.message);
-            // This ensures the page reloads only AFTER the alert is closed
-            window.location.reload(true); 
+
+    google.script.run
+        .withSuccessHandler(function (response) {
+            if (response.status === "Success") {
+                const overlay = document.getElementById('success-overlay');
+                const text = document.getElementById('msg-text');
+                text.innerText = response.message;
+                overlay.style.display = 'flex';
+            }
         })
-        .withFailureHandler(err => {
-            alert("Error: " + err.message);
-            // Reset button if it fails so it's not stuck on "Submitting..."
-            document.getElementById('submitBtn').innerHTML = "Submit Report";
-        })
-        .submitComplaint(formData);*/
-        google.script.run
-          .withSuccessHandler(function(response) {
-           if(response.status === "Success") {
-      // Find our new elements
-              const overlay = document.getElementById('success-overlay');
-              const text = document.getElementById('msg-text');
-      
-      // Set the text from your .gs file ("Report Saved Successfully!")
-            text.innerText = response.message;
-      
-      // Show it!
-             overlay.style.display = 'flex';
-     }
-  })
-  .submitComplaint(formData); // This matches your function name
-
-
-} // Ensure this closing brace for your main function is here!
-
- // <--- Make sure this closing brace for your submit function is here!
-
-
-
-  
+        .submitComplaint(formData);
+}
 </script>
 </body>
-</html>
+</html>  //27-4-2026 yash

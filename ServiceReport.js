@@ -4,7 +4,7 @@ const MASTER_SHEET_ID = "1oJMb4ZIbSOdSZZLD6DTIkl8-ItVb_AIZJlv4JPN6Jms";
 function doGet() {
   return HtmlService.createTemplateFromFile('index')
       .evaluate()
-      .setTitle('Complaint Dashboard')
+      .setTitle('Digital Complaint Report')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
@@ -163,11 +163,11 @@ try {
   Logger.log("Trigger Error: " + err.toString());
 }
 syncComplaintStatus(finalId, formData.resolved); // bpms intake /dispatch sheet update status when form filled 
- if (formData.resolved && formData.resolved.toString().toLowerCase() === "yes") {
+ if (formData.resolved && formData.resolved.toString().toLowerCase() === "resolved") {
       // If resolved is "Yes", remove it from the Pending List
       removeFromPendingList(finalId);
       
-    } else if (formData.resolved && formData.resolved.toString().toLowerCase() === "no") {
+    } else if (formData.resolved && formData.resolved.toString().toLowerCase() === "pending") {
       // If resolved is "No", add it to the Pending List
       syncPendingComplaints(finalId, formData);
     }// At the very end of your submitComplaint(formData) function in server.gs:
@@ -200,116 +200,11 @@ Logger.log("⏩ resolved value is: " + formData.resolved);
 }
 
 
+// 24-04-26 yash 
+
 
     
   
 
 
 
-/*function processPendingPDFs() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("Complaint Report1");
-  const folder = DriveApp.getFolderById("1tI-b7z7TSlgKoJ3PMAUdihjn10XoytUH");
-  const LOGO_ID = "1TU2KKJN4AQKkG7nMtMlCoiYX1wMD2QtB"; 
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return; 
-
-  // Fetch up to Column U (21 columns) to cover Service Report, Report Type, and Payment Proof
-  const data = sheet.getRange(2, 1, lastRow - 1, 21).getValues(); 
-
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    const rowIndex = i + 2; 
-    const id = row[1]; // Column B (Complaint ID)
-    
-    // Check "Service Report" column (Column S / Index 18) for existing link or status
-    const statusValue = row[18] ? row[18].toString().trim() : ""; 
-
-    // Skip if PDF exists or ID is missing
-    if (statusValue !== "" || !id) {
-      continue; 
-    }
-
-    // PDF Link destination: Column S (Column 19)
-    const statusCell = sheet.getRange(rowIndex, 19); 
-
-    try {
-      statusCell.setValue("GENERATING...");
-      SpreadsheetApp.flush(); 
-
-      const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HH-mm");
-      const fileName = "Report_" + id + "_" + timestamp + ".pdf";
-
-      const doc = DocumentApp.create(fileName.replace(".pdf", ""));
-      const docFile = DriveApp.getFileById(doc.getId()); 
-      docFile.moveTo(folder);
-      const body = doc.getBody();
-
-      // Header Image
-      try {
-        const logo = DriveApp.getFileById(LOGO_ID).getBlob();
-        body.appendImage(logo).setWidth(580).setHeight(130);
-      } catch (e) { Logger.log("Logo Error: " + e); }
-
-      body.appendParagraph("SERVICE REPORT").setHeading(DocumentApp.ParagraphHeading.HEADING1).setAlignment(DocumentApp.HorizontalAlignment.CENTER);
-
-      // DATA TABLE (Mapped to your provided column list)
-      const tableData = [
-        ["Complaint ID", id],
-        ["Customer", row[2]],        // Column C
-        ["Address", row[3]],         // Column D
-        ["Issue/Requirement", row[4]], // Column E
-        ["Brand/Model", row[11] + " / " + row[7]], // Column L / Column H
-        ["Serial No", row[8]],       // Column I
-        ["Service Type", row[10]],   // Column K
-        ["Resolved Status", row[14]], // Column O
-        ["Payment Status", row[15]],  // Column P
-        ["Technician", row[13]]      // Column N
-      ];
-      
-      const table = body.appendTable(tableData);
-      table.getRow(0).setAttributes({
-        [DocumentApp.Attribute.BOLD]: true, 
-        [DocumentApp.Attribute.BACKGROUND_COLOR]: '#f3f3f3'
-      });
-
-      // SIGNATURES
-      body.appendParagraph("\nSIGNATURES").setBold(true);
-      const sigTable = body.appendTable([["", ""]]);
-      sigTable.setBorderWidth(0);
-      
-      // Customer Sig - Column Q (Index 16)
-      if (row[16] && row[16].toString().includes("base64")) {
-        try {
-          const img = Utilities.newBlob(Utilities.base64Decode(row[16].split(",")[1]), "image/png");
-          sigTable.getCell(0,0).appendParagraph("Customer Signature:");
-          sigTable.getCell(0,0).appendImage(img).setWidth(150);
-        } catch(e) { Logger.log("Customer Sig Error row " + rowIndex); }
-      }
-      
-      // Tech Sig - Column R (Index 17)
-      if (row[17] && row[17].toString().includes("base64")) {
-        try {
-          const img = Utilities.newBlob(Utilities.base64Decode(row[17].split(",")[1]), "image/png");
-          sigTable.getCell(0,1).appendParagraph("Technician Signature:");
-          sigTable.getCell(0,1).appendImage(img).setWidth(150);
-        } catch(e) { Logger.log("Tech Sig Error row " + rowIndex); }
-      }
-
-      doc.saveAndClose();
-
-      const pdfBlob = docFile.getAs(MimeType.PDF).setName(fileName);
-      const pdfFile = folder.createFile(pdfBlob);
-      docFile.setTrashed(true);
-
-      // Set PDF link in Column S (19th column)
-      statusCell.setFormula('=HYPERLINK("' + pdfFile.getUrl() + '", "View Report")');
-      SpreadsheetApp.flush(); 
-
-    } catch (err) {
-      statusCell.setValue("ERROR");
-      Logger.log("Error on row " + rowIndex + ": " + err.message);
-    }
-  }
-}*/

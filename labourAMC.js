@@ -45,7 +45,7 @@ function generateLabourAMC() {
         info.company, // Company Name (from Cleaned)
         info.client,  // Client Name (from Cleaned)
         r[14],        // Service Type (from Report)
-        r[4],         // Issues (from Report - gets updated)
+        r[12],         // Issues (from Report - gets updated)
         info.type     // Customer Type (from Cleaned Col H)
       ];
 
