@@ -163,11 +163,11 @@ try {
   Logger.log("Trigger Error: " + err.toString());
 }
 syncComplaintStatus(finalId, formData.resolved); // bpms intake /dispatch sheet update status when form filled 
- if (formData.resolved && formData.resolved.toString().toLowerCase() === "yes") {
+ if (formData.resolved && formData.resolved.toString().toLowerCase() === "resolved") {
       // If resolved is "Yes", remove it from the Pending List
       removeFromPendingList(finalId);
       
-    } else if (formData.resolved && formData.resolved.toString().toLowerCase() === "no") {
+    } else if (formData.resolved && formData.resolved.toString().toLowerCase() === "pending") {
       // If resolved is "No", add it to the Pending List
       syncPendingComplaints(finalId, formData);
     }// At the very end of your submitComplaint(formData) function in server.gs:
