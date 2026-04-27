@@ -59,7 +59,7 @@ function generatePaymentFollowup() {
         r[14],                         // Col E: Service Type
         r[18] || "Pending",            // Col F: Resolved? (Column O)
         r[19] || "N/A",                // Col G: Tech Name (Column N)
-        r[4] || ""                     // Col H: Issue (Column E)
+        r[12] || ""                     // Col H: Issue (Column E)
       ]);
     }
   });

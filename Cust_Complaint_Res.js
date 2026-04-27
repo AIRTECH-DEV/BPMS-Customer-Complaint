@@ -77,11 +77,11 @@ function sendComplaintResolutionWhatsApp_(targetRow, ssId) {
  
     Logger.log("Column S: '" + status + "'");
  
-    if (status !== "yes") {
-      Logger.log("⚠️ Status not 'yes'. Stopping.");
+    if (status !== "resolved") {
+      Logger.log("⚠️ Status not 'Resolved'. Stopping.");
       return;
     }
-    Logger.log("✅ Status = 'yes'.");
+    Logger.log("✅ Status = 'Resolved'.");
  
     // ── STEP 2: Read headers + row data ──
     const ss2 = SpreadsheetApp.openById(ssId);
@@ -269,3 +269,5 @@ function TEST_ScheduleTrigger() {
 function getMySpreadsheetId() {
   Logger.log(SpreadsheetApp.getActiveSpreadsheet().getId());
 }
+
+//27-04-26 yash 

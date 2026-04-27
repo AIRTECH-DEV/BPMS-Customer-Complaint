@@ -3,7 +3,7 @@
 
 var COMPLAINT_TEMPLATE_DOC_ID = "1_dsXZdnwCajnmrfk4w3BgJI9-rz_vdDsCEJhHDisELo";
 var COMPLAINT_FOLDER_ID       = "1G8jvcUvWixpq_6d5X8YGveIldb7pp_Il";
-// var TEST_COMPLAINT_FOLDER_ID  = "1gS6OUjSOffA-9CslWReJlkthZ94dZUas";
+var TEST_COMPLAINT_FOLDER_ID  = "1gS6OUjSOffA-9CslWReJlkthZ94dZUas";
 var MAX_AC_ROWS_PER_PAGE = 7;
 // ─────────────────────────────────────────────────────────────────────────────
 function processPendingPDFs() {
@@ -13,7 +13,7 @@ function processPendingPDFs() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 25).getValues();
+  const data = sheet.getRange(2, 1, lastRow - 1, 26).getValues(); // ← 25→26
   const proofRichTexts = sheet.getRange(2, 25, lastRow - 1, 1).getRichTextValues();
 
   for (let i = 0; i < data.length; i++) {
@@ -44,26 +44,26 @@ function processPendingPDFs() {
 // ─────────────────────────────────────────────────────────────────────────────
 // TEST
 // ─────────────────────────────────────────────────────────────────────────────
-// function TEST_processPendingPDFs() {
-//   const ss      = SpreadsheetApp.getActiveSpreadsheet();
-//   const sheet   = ss.getSheetByName("Complaint Report1");
-//   const lastRow = sheet.getLastRow();
-//   if (lastRow < 2) { Logger.log("No data rows found."); return; }
+function TEST_processPendingPDFs() {
+  const ss      = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet   = ss.getSheetByName("Complaint Report1");
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) { Logger.log("No data rows found."); return; }
 
-//   const row    = sheet.getRange(lastRow, 1, 1, 25).getValues()[0];
-//   const id     = row[1];
-//   const folder = DriveApp.getFolderById(TEST_COMPLAINT_FOLDER_ID);
+  const row    = sheet.getRange(lastRow, 1, 1, 26).getValues()[0]; // ← 25→26
+  const id     = row[1];
+  const folder = DriveApp.getFolderById(TEST_COMPLAINT_FOLDER_ID);
 
-//   const richProof = sheet.getRange(lastRow, 25).getRichTextValue();
-//   const linkUrl   = richProof ? richProof.getLinkUrl() : null;
-//   row[24] = linkUrl || row[24];
-//   Logger.log("Payment proof URL resolved: " + row[24]);
+  const richProof = sheet.getRange(lastRow, 25).getRichTextValue();
+  const linkUrl   = richProof ? richProof.getLinkUrl() : null;
+  row[24] = linkUrl || row[24];
+  Logger.log("Payment proof URL resolved: " + row[24]);
 
-//   Logger.log("=== TEST STARTED === Row: " + lastRow + " | ID: " + id);
-//   const pdfFile = buildComplaintDocAndExportPDF(row, id, folder, true);
-//   Logger.log("PDF: https://drive.google.com/file/d/" + pdfFile.getId() + "/view");
-//   Logger.log("=== DONE ===");
-// }
+  Logger.log("=== TEST STARTED === Row: " + lastRow + " | ID: " + id);
+  const pdfFile = buildComplaintDocAndExportPDF(row, id, folder, true);
+  Logger.log("PDF: https://drive.google.com/file/d/" + pdfFile.getId() + "/view");
+  Logger.log("=== DONE ===");
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CORE PDF GENERATION
@@ -107,7 +107,7 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   const tp = lc.getChild(0).asParagraph();
   tp.setAlignment(DocumentApp.HorizontalAlignment.LEFT)
     .setSpacingBefore(0).setSpacingAfter(0).clear();
-  tp.appendText('SERVICE ');
+  tp.appendText('COMPLAINT ');
   const titleText = tp.editAsText();
   titleText.setFontFamily('Arial').setFontSize(22).setBold(true).setForegroundColor(DARK);
   tp.appendText('REPORT');
@@ -159,34 +159,36 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   // 6. AC UNIT DETAILS – chunked with repeated header
   appendSvcHeader(body, 'AC UNIT DETAILS', RED);
 
-  const models    = splitCSV(row[7]);
-  const serials   = splitCSV(row[8]);
-  const locations = splitCSV(row[9]);
-  const machTypes = splitCSV(row[10]);
-  const gasTypes  = splitCSV(row[11]);
-  const problems  = splitCSV(row[12]);
-  const actions   = splitCSV(row[13]);
-  const brands    = splitCSV(row[15]);
+  const models          = splitCSV(row[7]);
+  const serials         = splitCSV(row[8]);
+  // row[9] (locations) — REMOVED
+  const machTypes       = splitCSV(row[10]);
+  const gasTypes        = splitCSV(row[11]);
+  const problems        = splitCSV(row[12]);
+  const actions         = splitCSV(row[13]);
+  const brands          = splitCSV(row[15]);
+  const problemStatuses = splitCSV(row[25]); // ← NEW: col Z (index 25)
 
   const acCount = Math.max(
-    models.length, serials.length, locations.length,
+    models.length, serials.length,
     machTypes.length, gasTypes.length, problems.length, actions.length,
-    brands.length, 1
+    brands.length, problemStatuses.length, 1
   );
 
-  const acHeader   = ["S/N", "MACHINE BRAND", "MODEL", "SERIAL NO", "MACHINE TYPE", "GAS TYPE", "LOCATION", "PROBLEM", "ACTION TAKEN"];
+  // ← LOCATION removed, PROBLEM STATUS added at end
+  const acHeader   = ["S/N", "MACHINE BRAND", "MODEL", "SERIAL NO", "MACHINE TYPE", "GAS TYPE", "PROBLEM", "ACTION TAKEN", "PROBLEM STATUS"];
   const acDataRows = [];
   for (let r = 0; r < acCount; r++) {
     acDataRows.push([
       String(r + 1),
-      brands[r]    || "—",
-      models[r]    || "—",
-      serials[r]   || "—",
-      machTypes[r] || "—",
-      gasTypes[r]  || "—",
-      locations[r] || "—",
-      problems[r]  || "—",
-      actions[r]   || "—"
+      brands[r]           || "—",
+      models[r]           || "—",
+      serials[r]          || "—",
+      machTypes[r]        || "—",
+      gasTypes[r]         || "—",
+      problems[r]         || "—",
+      actions[r]          || "—",
+      problemStatuses[r]  || "—"  // ← NEW
     ]);
   }
 
@@ -197,10 +199,8 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   while (chunkStart < acDataRows.length) {
     if (!isFirstChunk) {
       body.appendPageBreak();
-      // ── Professional top-of-page gap before "continued" header ──
       appendPageTopSpacer(body);
       appendSvcHeader(body, 'AC UNIT DETAILS (continued)', RED);
-      // ── Gap between continued header and table rows ──
       body.appendParagraph('').setSpacingBefore(0).setSpacingAfter(10);
     }
     const chunkEnd  = Math.min(chunkStart + MAX_AC_ROWS_PER_PAGE, acDataRows.length);
@@ -215,7 +215,6 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
 
   // 7. PAYMENT PROOF + SIGNATURES – always on a fresh page
   body.appendPageBreak();
-  // ── Professional top-of-page gap ──
   appendPageTopSpacer(body);
 
   const payProofVal = row[24] ? row[24].toString().trim() : "";
@@ -223,7 +222,6 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   const hasProof    = payProofVal && !skipProof.includes(payProofVal.toLowerCase());
 
   if (hasProof) {
-    // PAYMENT PROOF header — spacingBefore 0 because the top spacer above handles it
     const proofHdrPara = body.appendParagraph('PAYMENT PROOF');
     proofHdrPara.setSpacingBefore(0).setSpacingAfter(12);
     proofHdrPara.editAsText()
@@ -246,11 +244,9 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
         .setUnderline(true).setLinkUrl(payProofVal);
     }
 
-    // ── Gap between proof content and SIGNATURES header ──
     body.appendParagraph('').setSpacingBefore(0).setSpacingAfter(20);
   }
 
-  // SIGNATURES header — spacingBefore 0 because gap paragraph above (or top spacer) handles it
   const sigHdrPara = body.appendParagraph('SIGNATURES');
   sigHdrPara.setSpacingBefore(0).setSpacingAfter(16);
   sigHdrPara.editAsText()
@@ -259,7 +255,6 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   const sigTable = body.appendTable([['', '']]);
   sigTable.setBorderWidth(0);
 
-  // Customer Signature (left)
   const custSig = sigTable.getCell(0, 0);
   custSig.setPaddingTop(6).setPaddingBottom(6).setPaddingLeft(0).setPaddingRight(10);
   custSig.setBackgroundColor(WHITE);
@@ -283,7 +278,6 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
       .setFontFamily('Arial').setFontSize(10).setForegroundColor(LGRAY);
   }
 
-  // Technician Signature (right)
   const techSig = sigTable.getCell(0, 1);
   techSig.setPaddingTop(6).setPaddingBottom(6).setPaddingLeft(10).setPaddingRight(0);
   techSig.setBackgroundColor(WHITE);
@@ -334,12 +328,6 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Inserts a blank spacer paragraph right after a page break.
- * This creates professional breathing room between the page top margin
- * and the first section header on that page.
- * Adjust setSpacingAfter to change the gap size (28pt ≈ ~1cm).
- */
 function appendPageTopSpacer(body) {
   const spacer = body.appendParagraph('');
   spacer.setSpacingBefore(0).setSpacingAfter(28);
@@ -393,7 +381,7 @@ function styleInfoTable(table, BGRAY, GRAY, DARK, GREEN, AMBER, LGRAY, WHITE) {
 }
 
 function styleACTable(table, RED, DARK, GRAY, WHITE, LGRAY, acFontSize) {
-  const NUM_COLS = 9;
+  const NUM_COLS = 9; // unchanged: removed LOCATION (+0), added PROBLEM STATUS (+0) = still 9
 
   for (let r = 0; r < table.getNumRows(); r++) {
     const row = table.getRow(r);
@@ -427,4 +415,4 @@ function styleACTable(table, RED, DARK, GRAY, WHITE, LGRAY, acFontSize) {
       }
     }
   }
-}  //BY YASH RANE 14/04/2026 06:10
+}  //BY YASH RANE 25-04-2026
