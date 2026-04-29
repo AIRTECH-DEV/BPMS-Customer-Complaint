@@ -408,10 +408,23 @@ if (remainingOnPagePt >= 0 && remainingOnPagePt < sigSectionHeight) {
   DriveApp.getFileById(docId).setTrashed(true);
   Logger.log("Temp Doc deleted");
 
-  const suffix  = isTest ? "_ServiceReport_TEST.pdf" : "_ServiceReport.pdf";
-  const pdfName = Utilities.formatDate(new Date(), "GMT+5:30", "dd_MMM_yyyy")
-                  + "_" + id + suffix;
+  const clientName = sanitizeFileNamePart(row[2] ? row[2].toString() : "Unknown");
+  const suffix     = isTest ? "__DCR.pdf" : "_DCR.pdf";
+  const pdfName    = Utilities.formatDate(new Date(), "GMT+5:30", "yyyy-MM-dd")
+                    + "_" + id
+                    + "_" + clientName
+                    + suffix;
   return targetFolder.createFile(pdfResp.getBlob()).setName(pdfName);
+}
+
+function sanitizeFileNamePart(value) {
+  const raw = value ? value.toString().trim() : "";
+  if (!raw) return "Unknown";
+  return raw
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_\-]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'Unknown';
 }
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
