@@ -399,7 +399,7 @@
 <div id="success-overlay">
     <div class="success-card">
         <h1 id="msg-text"></h1>
-        <button onclick="resetForm()"
+        <button onclick="showFreshForm()"
                 style="padding: 12px 30px; font-size: 20px; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 10px;">
             OK
         </button>
@@ -580,6 +580,12 @@ function updateHeader() {
         customerDropdown.disabled = false;
         customerDropdown.options[0].text = "-- Now Select Company/Client --";
         customerDropdown.classList.add('border-success');
+    } else {
+        displayHeader.innerText = 'Select Report Type';
+        customerDropdown.disabled = true;
+        customerDropdown.value = '';
+        customerDropdown.options[0].text = '-- Select Report Type Above First --';
+        customerDropdown.classList.remove('border-success');
     }
 }
 
@@ -767,10 +773,86 @@ function resetForm() {
     window.location.href = webAppUrl;
 }
 
+function showFreshForm() {
+    const form = document.getElementById('complaintForm');
+    const overlay = document.getElementById('success-overlay');
+    const reportType = document.getElementById('reportTypeSelect');
+    const customerSelect = document.getElementById('customerSelect');
+    const machineContainer = document.getElementById('machineContainer');
+    const firstMachineRow = machineContainer.querySelector('.machine-row');
+
+    overlay.style.display = 'none';
+    form.reset();
+    restoreSubmitButton();
+
+    if (firstMachineRow) {
+        machineContainer.innerHTML = '';
+        firstMachineRow.querySelectorAll('input, textarea').forEach(input => input.value = '');
+        firstMachineRow.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+        firstMachineRow.querySelectorAll('.other-type-input, .other-problem-input, .other-make-input, .other-gas-input').forEach(el => {
+            el.style.display = 'none';
+            el.value = '';
+            el.removeAttribute('required');
+        });
+        machineContainer.appendChild(firstMachineRow);
+    }
+
+    document.getElementById('displayHeader').innerText = 'Select Report Type';
+    reportType.selectedIndex = 0;
+    reportType.disabled = false;
+    reportType.classList.remove('bg-light');
+    customerSelect.disabled = true;
+    customerSelect.classList.remove('border-success');
+    customerSelect.selectedIndex = 0;
+    if (customerSelect.options.length) {
+        customerSelect.options[0].text = '-- Select Report Type Above First --';
+    }
+
+    document.getElementById('otherServiceContainer').style.display = 'none';
+    document.getElementById('otherServiceInput').removeAttribute('required');
+    document.getElementById('otherTechInput').style.display = 'none';
+    document.getElementById('otherTechInput').removeAttribute('required');
+    document.getElementById('otherHelperInput').style.display = 'none';
+    document.getElementById('otherHelperInput').removeAttribute('required');
+    document.getElementById('paymentReceivedContainer').style.display = 'none';
+    document.getElementById('paymentReceived').required = false;
+    document.getElementById('machineSummaryContainer').innerHTML = '';
+    document.getElementById('resolved').value = 'Pending';
+    document.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+    customerPad.clear();
+    techPad.clear();
+    customerPad.on();
+    techPad.on();
+    padStatus = { customer: false, tech: false };
+    resetLockButton('lockCustBtn', 'custIcon');
+    resetLockButton('lockTechBtn', 'techIcon');
+
+    goToStep(1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetLockButton(buttonId, iconId) {
+    const lockBtn = document.getElementById(buttonId);
+    if (!lockBtn) return;
+    lockBtn.classList.remove('btn-warning');
+    lockBtn.classList.add('btn-outline-secondary');
+    lockBtn.innerHTML = `<i class="bi bi-unlock" id="${iconId}"></i> Lock`;
+}
+
 // ============================================================
 // FORM SUBMIT
 // ============================================================
 let isProcessing = false;
+
+function restoreSubmitButton() {
+    isProcessing = false;
+    const submitBtn = document.querySelector('#complaintForm button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Submit Final Report';
+    }
+}
 
 document.getElementById('complaintForm').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -780,11 +862,6 @@ document.getElementById('complaintForm').addEventListener('submit', function (e)
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting...';
 
-    const overlay = document.getElementById('success-overlay');
-    const msgH2 = document.getElementById('msg-text');
-    msgH2.innerText = "REPORT SUBMITTED SUCCESSFULLY!";
-    overlay.style.display = 'flex';
-
     const fileInput = document.getElementById('paymentProof');
     const file = fileInput.files[0];
 
@@ -792,11 +869,19 @@ document.getElementById('complaintForm').addEventListener('submit', function (e)
         const reader = new FileReader();
         reader.onload = function (e) {
             const base64Data = e.target.result.split(',')[1];
-            processSubmission(base64Data, file.type);
+            try {
+                processSubmission(base64Data, file.type);
+            } catch (error) {
+                restoreSubmitButton();
+            }
         };
         reader.readAsDataURL(file);
     } else {
-        processSubmission(null, null);
+        try {
+            processSubmission(null, null);
+        } catch (error) {
+            restoreSubmitButton();
+        }
     }
 });
 
@@ -885,15 +970,22 @@ function processSubmission(fileData, fileType) {
 
     google.script.run
         .withSuccessHandler(function (response) {
-            if (response.status === "Success") {
+            if (response && response.status === "Success") {
                 const overlay = document.getElementById('success-overlay');
                 const text = document.getElementById('msg-text');
-                text.innerText = response.message;
+                text.innerText = response.message || "Report Saved Successfully!";
                 overlay.style.display = 'flex';
+            } else {
+                alert((response && response.message) || "Report could not be saved. Please try again.");
+                restoreSubmitButton();
             }
+        })
+        .withFailureHandler(function (error) {
+            alert((error && error.message) ? error.message : "Report could not be saved. Please try again.");
+            restoreSubmitButton();
         })
         .submitComplaint(formData);
 }
 </script>
 </body>
-</html>  //27-4-2026 yash
+</html>  
