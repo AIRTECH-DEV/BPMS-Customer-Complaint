@@ -423,6 +423,9 @@
 
 <script>
 let customerPad, techPad;
+const DRAFT_KEY = 'bpmsComplaintFormDraft';
+let isRestoringDraft = false;
+let savedPaymentProof = null;
 
 function loadActiveCustomers() {
     let select = document.getElementById('customerSelect');
@@ -436,6 +439,7 @@ function loadActiveCustomers() {
                 opt.innerHTML = name;
                 select.appendChild(opt);
             });
+            restoreDraft();
         })
         .getCustomerList();
 }
@@ -443,8 +447,197 @@ function loadActiveCustomers() {
 window.onload = () => {
     customerPad = new SignaturePad(document.getElementById('customerCanvas'));
     techPad = new SignaturePad(document.getElementById('techCanvas'));
+    bindDraftAutosave();
     loadActiveCustomers();
 };
+
+function bindDraftAutosave() {
+    document.getElementById('complaintForm').addEventListener('input', saveDraft);
+    document.getElementById('complaintForm').addEventListener('change', saveDraft);
+    document.getElementById('reportTypeSelect').addEventListener('change', saveDraft);
+
+    document.getElementById('paymentProof').addEventListener('change', function () {
+        const file = this.files[0];
+        savedPaymentProof = null;
+        if (!file) {
+            saveDraft();
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            savedPaymentProof = {
+                name: file.name,
+                type: file.type,
+                data: e.target.result.split(',')[1]
+            };
+            saveDraft();
+        };
+        reader.readAsDataURL(file);
+    });
+
+    ['customerCanvas', 'techCanvas'].forEach(id => {
+        const canvas = document.getElementById(id);
+        canvas.addEventListener('mouseup', () => setTimeout(saveDraft, 100));
+        canvas.addEventListener('touchend', () => setTimeout(saveDraft, 100));
+    });
+
+    window.addEventListener('beforeunload', saveDraft);
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') saveDraft();
+    });
+}
+
+function getCurrentStep() {
+    const activeStep = document.querySelector('.step-container.active');
+    return activeStep ? Number(activeStep.id.replace('step', '')) : 1;
+}
+
+function collectMachineRows() {
+    return Array.from(document.querySelectorAll('.machine-row')).map(row => ({
+        location: row.querySelector('.machine-location').value,
+        serial: row.querySelector('.machine-serial').value,
+        model: row.querySelector('.machine-model').value,
+        make: row.querySelector('.machine-make').value,
+        otherMake: row.querySelector('.other-make-input').value,
+        type: row.querySelector('.machine-type').value,
+        otherType: row.querySelector('.other-type-input').value,
+        gas: row.querySelector('.machine-gas').value,
+        otherGas: row.querySelector('.other-gas-input').value,
+        problem: row.querySelector('.machine-problem').value,
+        otherProblem: row.querySelector('.other-problem-input').value,
+        status: row.querySelector('.machine-status').value,
+        action: row.querySelector('.machine-action').value
+    }));
+}
+
+function saveDraft() {
+    if (isRestoringDraft) return;
+
+    const draft = {
+        reportType: document.getElementById('reportTypeSelect').value,
+        company: document.getElementById('customerSelect').value,
+        address: document.getElementById('address').value,
+        contact: document.getElementById('contact').value,
+        phone: document.getElementById('phone').value,
+        brand: document.getElementById('brand').value,
+        serviceType: document.getElementById('serviceType').value,
+        otherService: document.getElementById('otherServiceInput').value,
+        complaintType: document.getElementById('complaintType').value,
+        paymentStatus: document.getElementById('paymentReceived').value,
+        tech: document.getElementById('tech').value,
+        otherTech: document.getElementById('otherTechInput').value,
+        helper: document.getElementById('helper').value,
+        otherHelper: document.getElementById('otherHelperInput').value,
+        machines: collectMachineRows(),
+        currentStep: getCurrentStep(),
+        customerSig: customerPad && !customerPad.isEmpty() ? customerPad.toDataURL() : '',
+        techSig: techPad && !techPad.isEmpty() ? techPad.toDataURL() : '',
+        paymentProof: savedPaymentProof,
+        savedAt: new Date().toISOString()
+    };
+
+    try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } catch (error) {
+        draft.paymentProof = null;
+        savedPaymentProof = null;
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        } catch (secondError) {
+            console.warn('Draft could not be saved in this browser.', secondError);
+        }
+    }
+}
+
+function clearDraft() {
+    savedPaymentProof = null;
+    localStorage.removeItem(DRAFT_KEY);
+}
+
+function setSelectValue(select, value) {
+    select.value = value || '';
+    if (select.value !== (value || '')) {
+        select.selectedIndex = 0;
+    }
+}
+
+function restoreMachineRow(row, data) {
+    row.querySelector('.machine-location').value = data.location || '';
+    row.querySelector('.machine-serial').value = data.serial || '';
+    row.querySelector('.machine-model').value = data.model || '';
+    setSelectValue(row.querySelector('.machine-make'), data.make);
+    row.querySelector('.other-make-input').value = data.otherMake || '';
+    toggleOtherMake(row.querySelector('.machine-make'));
+    setSelectValue(row.querySelector('.machine-type'), data.type);
+    row.querySelector('.other-type-input').value = data.otherType || '';
+    toggleMachineTypeInput(row.querySelector('.machine-type'));
+    setSelectValue(row.querySelector('.machine-gas'), data.gas);
+    row.querySelector('.other-gas-input').value = data.otherGas || '';
+    toggleOtherGas(row.querySelector('.machine-gas'));
+    setSelectValue(row.querySelector('.machine-problem'), data.problem);
+    row.querySelector('.other-problem-input').value = data.otherProblem || '';
+    toggleOtherProblem(row.querySelector('.machine-problem'));
+    setSelectValue(row.querySelector('.machine-status'), data.status);
+    row.querySelector('.machine-action').value = data.action || '';
+}
+
+function restoreDraft() {
+    const rawDraft = localStorage.getItem(DRAFT_KEY);
+    if (!rawDraft) return;
+
+    let draft;
+    try {
+        draft = JSON.parse(rawDraft);
+    } catch (error) {
+        clearDraft();
+        return;
+    }
+
+    isRestoringDraft = true;
+    const reportType = document.getElementById('reportTypeSelect');
+    const customerSelect = document.getElementById('customerSelect');
+
+    setSelectValue(reportType, draft.reportType);
+    updateHeader();
+    setSelectValue(customerSelect, draft.company);
+    document.getElementById('address').value = draft.address || '';
+    document.getElementById('contact').value = draft.contact || '';
+    document.getElementById('phone').value = draft.phone || '';
+    document.getElementById('brand').value = draft.brand || '';
+    setSelectValue(document.getElementById('serviceType'), draft.serviceType);
+    document.getElementById('otherServiceInput').value = draft.otherService || '';
+    toggleOtherService(document.getElementById('serviceType'));
+    document.getElementById('complaintType').value = draft.complaintType || '';
+    setSelectValue(document.getElementById('paymentReceived'), draft.paymentStatus);
+    setSelectValue(document.getElementById('tech'), draft.tech);
+    document.getElementById('otherTechInput').value = draft.otherTech || '';
+    toggleOtherTech();
+    setSelectValue(document.getElementById('helper'), draft.helper);
+    document.getElementById('otherHelperInput').value = draft.otherHelper || '';
+    toggleOtherHelper();
+
+    const machineContainer = document.getElementById('machineContainer');
+    const firstMachineRow = machineContainer.querySelector('.machine-row');
+    machineContainer.innerHTML = '';
+    const machineRows = draft.machines && draft.machines.length ? draft.machines : [{}];
+    machineRows.forEach(machine => {
+        const row = firstMachineRow.cloneNode(true);
+        restoreMachineRow(row, machine);
+        machineContainer.appendChild(row);
+    });
+
+    savedPaymentProof = draft.paymentProof || null;
+    if (draft.customerSig) customerPad.fromDataURL(draft.customerSig);
+    if (draft.techSig) techPad.fromDataURL(draft.techSig);
+
+    const stepToRestore = Number(draft.currentStep) || 1;
+    if (stepToRestore === 3) {
+        computeGlobalStatus();
+    }
+    goToStep(stepToRestore);
+    isRestoringDraft = false;
+}
 
 function fetchDetails() {
     let name = document.getElementById('customerSelect').value;
@@ -457,6 +650,7 @@ function fetchDetails() {
                 document.getElementById('phone').value = data.phone;
                 document.getElementById('brand').value = data.brand;
                 document.getElementById('complaintType').value = data.complaintType;
+                saveDraft();
             }
         })
         .getCustomerDetails(name);
@@ -568,6 +762,7 @@ function goToStep(step) {
 
     document.getElementById('label2').classList.toggle('text-primary', step >= 2);
     document.getElementById('label3').classList.toggle('text-primary', step >= 3);
+    saveDraft();
 }
 
 function updateHeader() {
@@ -605,11 +800,14 @@ function addMachine() {
     const modelInput = row.querySelector('.machine-model');
     modelInput.oninput = function() { this.value = this.value.toUpperCase(); };
     container.appendChild(row);
+    saveDraft();
 }
 
 function removeMachine(btn) {
-    if (document.querySelectorAll('.machine-row').length > 1)
+    if (document.querySelectorAll('.machine-row').length > 1) {
         btn.closest('.machine-row').remove();
+        saveDraft();
+    }
 }
 
 // ============================================================
@@ -774,6 +972,7 @@ function resetForm() {
 }
 
 function showFreshForm() {
+    clearDraft();
     const form = document.getElementById('complaintForm');
     const overlay = document.getElementById('success-overlay');
     const reportType = document.getElementById('reportTypeSelect');
@@ -876,6 +1075,12 @@ document.getElementById('complaintForm').addEventListener('submit', function (e)
             }
         };
         reader.readAsDataURL(file);
+    } else if (savedPaymentProof && savedPaymentProof.data) {
+        try {
+            processSubmission(savedPaymentProof.data, savedPaymentProof.type);
+        } catch (error) {
+            restoreSubmitButton();
+        }
     } else {
         try {
             processSubmission(null, null);
@@ -971,6 +1176,7 @@ function processSubmission(fileData, fileType) {
     google.script.run
         .withSuccessHandler(function (response) {
             if (response && response.status === "Success") {
+                clearDraft();
                 const overlay = document.getElementById('success-overlay');
                 const text = document.getElementById('msg-text');
                 text.innerText = response.message || "Report Saved Successfully!";
