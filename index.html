@@ -254,6 +254,7 @@
                                 <option value="Capactitor">Capactitor</option>
                                 <option value="Contactor">Contactor</option>
                                 <option value="Compressor">Compressor</option>
+                                <option value="No cooling">No cooling</option>
                                 <option value="Other">Other</option>
                             </select>
                             <input type="text" class="form-control mt-2 other-problem-input" placeholder="Specify problem" style="display: none;">
@@ -359,6 +360,7 @@
                             <option value="Servesh">Servesh</option>
                             <option value="Sufiyan">Sufiyan</option>
                             <option value="Sohel">Sohel</option>
+                            <option value="No helper">No helper</option>
                             <option value="Other">Other</option>
                         </select>
                         <input type="text" class="form-control mt-2" id="otherHelperInput" placeholder="Enter helper name" style="display: none;">
@@ -417,13 +419,33 @@
     text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 .success-card h1 { font-size: 48px; color: #2ecc71; margin-bottom: 20px; }
+
+
+/* PASTE HERE - Start */
+.select2-container .select2-selection--single {
+    height: 38px !important;
+    border: 1px solid #dee2e6 !important;
+    display: flex;
+    align-items: center;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px !important;
+}
+/* PASTE HERE - End */
 </style>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+<!---additional-->
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!---->
 <script>
 let customerPad, techPad;
 const DRAFT_KEY = 'bpmsComplaintFormDraft';
+const SESSION_ACTIVE_KEY = 'bpmsSessionActive';
 let isRestoringDraft = false;
 let savedPaymentProof = null;
 
@@ -439,7 +461,27 @@ function loadActiveCustomers() {
                 opt.innerHTML = name;
                 select.appendChild(opt);
             });
-            restoreDraft();
+            // --- ADD THESE LINES START ---
+            $('#customerSelect').select2({
+                placeholder: "-- Choose --",
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Since Select2 overrides standard change events, 
+            // trigger your details fetch like this:
+            $('#customerSelect').on('select2:select', function (e) {
+                fetchDetails(); 
+            });
+            // --- ADD THESE LINES END ---
+            
+            // Only restore draft if this is a page refresh (sessionStorage exists)
+            // Fresh links should not restore old data
+            if (sessionStorage.getItem(SESSION_ACTIVE_KEY)) {
+                restoreDraft();
+            }
+            // Mark this session as active for future refreshes
+            sessionStorage.setItem(SESSION_ACTIVE_KEY, 'true');
         })
         .getCustomerList();
 }
@@ -600,7 +642,10 @@ function restoreDraft() {
 
     setSelectValue(reportType, draft.reportType);
     updateHeader();
-    setSelectValue(customerSelect, draft.company);
+    // Use Select2 API for customerSelect since it's initialized with Select2
+    if (draft.company) {
+        $('#customerSelect').val(draft.company).trigger('change');
+    }
     document.getElementById('address').value = draft.address || '';
     document.getElementById('contact').value = draft.contact || '';
     document.getElementById('phone').value = draft.phone || '';
@@ -973,6 +1018,7 @@ function resetForm() {
 
 function showFreshForm() {
     clearDraft();
+    sessionStorage.removeItem(SESSION_ACTIVE_KEY);  // Clear session flag so fresh link doesn't restore old data
     const form = document.getElementById('complaintForm');
     const overlay = document.getElementById('success-overlay');
     const reportType = document.getElementById('reportTypeSelect');
@@ -1005,6 +1051,9 @@ function showFreshForm() {
     customerSelect.selectedIndex = 0;
     if (customerSelect.options.length) {
         customerSelect.options[0].text = '-- Select Report Type Above First --';
+    }
+    if (window.jQuery && $('#customerSelect').data('select2')) {
+        $('#customerSelect').val(null).trigger('change');
     }
 
     document.getElementById('otherServiceContainer').style.display = 'none';
