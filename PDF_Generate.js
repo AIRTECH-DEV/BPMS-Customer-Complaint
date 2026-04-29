@@ -1,38 +1,64 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN
+// ─────────────────────────────────────────────────────────────────────────────
 
 var COMPLAINT_TEMPLATE_DOC_ID = "1_dsXZdnwCajnmrfk4w3BgJI9-rz_vdDsCEJhHDisELo";
 var COMPLAINT_FOLDER_ID       = "1G8jvcUvWixpq_6d5X8YGveIldb7pp_Il";
 var TEST_COMPLAINT_FOLDER_ID  = "1gS6OUjSOffA-9CslWReJlkthZ94dZUas";
+
 var MAX_AC_ROWS_PER_PAGE = 7;
+
+// Layout tuning
+// var AC_FIRST_PAGE_BUDGET_PT   = 340; // first AC block page after customer section
+// var AC_OTHER_PAGE_BUDGET_PT   = 580; // continuation pages
+// var PAGE_TOP_SPACER_PT        = 14;
+// var SECTION_HEADER_BEFORE_PT   = 6;
+// var SECTION_HEADER_AFTER_PT    = 4;
+// var PAGE_BREAK_GAP_PT          = 0;
+
+var AC_FIRST_PAGE_BUDGET_PT   = 180; // available for AC on first page (page height minus ~400pt customer section)
+var AC_OTHER_PAGE_BUDGET_PT   = 530; // continuation page body budget
+var FULL_PAGE_HEIGHT_PT       = 580; // conservative A4 effective body height (accounts for template header/footer)
+var FIXED_CONTENT_HEIGHT_PT   = 400; // first-page fixed overhead: title + id + customer table + AC header
+var CONTINUATION_OH_PT        = 50;  // continuation page overhead: spacer + "AC UNIT DETAILS (continued)" header
+var PAGE_TOP_SPACER_PT        = 14;
+var SECTION_HEADER_BEFORE_PT   = 6;
+var SECTION_HEADER_AFTER_PT    = 4;
+var PAGE_BREAK_GAP_PT          = 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROCESS
 // ─────────────────────────────────────────────────────────────────────────────
 function processPendingPDFs() {
-  const ss     = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet  = ss.getSheetByName("Complaint Report1");
-  const folder = DriveApp.getFolderById(COMPLAINT_FOLDER_ID);
+  const ss      = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet   = ss.getSheetByName("Complaint Report1");
+  const folder  = DriveApp.getFolderById(COMPLAINT_FOLDER_ID);
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
 
-  const data = sheet.getRange(2, 1, lastRow - 1, 26).getValues(); // ← 25→26
+  const data = sheet.getRange(2, 1, lastRow - 1, 26).getValues();
   const proofRichTexts = sheet.getRange(2, 25, lastRow - 1, 1).getRichTextValues();
 
   for (let i = 0; i < data.length; i++) {
-    const row      = data[i];
+    const row = data[i];
     const rowIndex = i + 2;
-    const id       = row[1];
+    const id = row[1];
     const statusValue = row[22] ? row[22].toString().trim() : "";
     if (statusValue !== "" || !id) continue;
 
-    const richProof   = proofRichTexts[i][0];
-    const linkUrl     = richProof ? richProof.getLinkUrl() : null;
+    const richProof = proofRichTexts[i][0];
+    const linkUrl   = richProof ? richProof.getLinkUrl() : null;
     row[24] = linkUrl || row[24];
 
     const statusCell = sheet.getRange(rowIndex, 23);
+
     try {
       statusCell.setValue("GENERATING...");
       SpreadsheetApp.flush();
+
       const pdfFile = buildComplaintDocAndExportPDF(row, id, folder, false);
       statusCell.setFormula('=HYPERLINK("' + pdfFile.getUrl() + '","View Report")');
+
       SpreadsheetApp.flush();
     } catch (err) {
       statusCell.setValue("ERROR");
@@ -50,7 +76,7 @@ function TEST_processPendingPDFs() {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) { Logger.log("No data rows found."); return; }
 
-  const row    = sheet.getRange(lastRow, 1, 1, 26).getValues()[0]; // ← 25→26
+  const row    = sheet.getRange(lastRow, 1, 1, 26).getValues()[0];
   const id     = row[1];
   const folder = DriveApp.getFolderById(TEST_COMPLAINT_FOLDER_ID);
 
@@ -69,7 +95,6 @@ function TEST_processPendingPDFs() {
 // CORE PDF GENERATION
 // ─────────────────────────────────────────────────────────────────────────────
 function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
-
   const RED   = '#D0312D';
   const DARK  = '#1A1A1A';
   const GRAY  = '#777777';
@@ -78,6 +103,11 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   const GREEN = '#1A7A4A';
   const WHITE = '#FFFFFF';
   const BGRAY = '#F5F5F5';
+
+  // Payment proof resolved early so we can paginate intelligently
+  const payProofVal = row[24] ? row[24].toString().trim() : "";
+  const skipProof   = ["", "n/a", "no proof uploaded", "no proof", "none"];
+  const hasProof    = payProofVal && !skipProof.includes(payProofVal.toLowerCase());
 
   // 1. Copy template
   const tempName   = 'Temp_' + id + '_' + new Date().getTime();
@@ -90,19 +120,30 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   const body     = doc.getBody();
   body.clear();
 
+
   // 2. Timestamp
-  const now    = new Date();
+  const now = new Date();
   const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const tsFormatted =
     now.getDate() + " " + MONTHS[now.getMonth()] + " " + now.getFullYear() +
     " | " + ("0"+now.getHours()).slice(-2) + ":" + ("0"+now.getMinutes()).slice(-2);
 
   // 3. Title row
+  // const titleTable = body.appendTable([['','']]);
+  const firstPara = body.getParagraphs()[0];
+if (firstPara) {
+  firstPara.setSpacingBefore(0).setSpacingAfter(0);
+}
   const titleTable = body.appendTable([['','']]);
+titleTable.setBorderWidth(0);
+titleTable.setAttributes({
+  [DocumentApp.Attribute.SPACING_BEFORE]: 0,
+  [DocumentApp.Attribute.SPACING_AFTER]: 0
+});
   titleTable.setBorderWidth(0).setBorderColor(WHITE);
 
   const lc = titleTable.getCell(0,0);
-  lc.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(0).setPaddingRight(4);
+  lc.setPaddingTop(4).setPaddingBottom(2).setPaddingLeft(0).setPaddingRight(4);
   lc.setBackgroundColor(WHITE);
   const tp = lc.getChild(0).asParagraph();
   tp.setAlignment(DocumentApp.HorizontalAlignment.LEFT)
@@ -115,7 +156,7 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   tp.editAsText().setForegroundColor(fullTitle.length - 6, fullTitle.length - 1, RED);
 
   const rc = titleTable.getCell(0,1);
-  rc.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(4).setPaddingRight(0);
+  rc.setPaddingTop(4).setPaddingBottom(0).setPaddingLeft(4).setPaddingRight(0);
   rc.setBackgroundColor(WHITE);
   const dp = rc.getChild(0).asParagraph();
   dp.setAlignment(DocumentApp.HorizontalAlignment.RIGHT)
@@ -125,17 +166,18 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
 
   // Red divider
   const redLine = body.appendParagraph('');
-  redLine.setSpacingBefore(4).setSpacingAfter(10);
+  redLine.setSpacingBefore(0).setSpacingAfter(0);
   const redLineAttr = {};
-  redLineAttr[DocumentApp.Attribute.BORDER_WIDTH]   = 2;
-  redLineAttr[DocumentApp.Attribute.BORDER_COLOR]   = RED;
-  redLineAttr[DocumentApp.Attribute.SPACING_BEFORE] = 4;
-  redLineAttr[DocumentApp.Attribute.SPACING_AFTER]  = 10;
+  redLineAttr[DocumentApp.Attribute.BORDER_WIDTH]  = 1;
+  redLineAttr[DocumentApp.Attribute.BORDER_COLOR]  = RED;
+  redLineAttr[DocumentApp.Attribute.SPACING_BEFORE] = 1;
+  redLineAttr[DocumentApp.Attribute.SPACING_AFTER]  = 1;
   redLine.setAttributes(redLineAttr);
 
   // 4. Complaint ID
   const idPara = body.appendParagraph(id.toString());
-  idPara.setSpacingBefore(0).setSpacingAfter(8);
+  idPara.setSpacingBefore(0)
+  idPara.setSpacingBefore(0).setSpacingAfter(3);
   idPara.editAsText()
         .setFontFamily('Arial').setFontSize(15).setBold(true).setForegroundColor(DARK);
 
@@ -148,82 +190,123 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
     ["SERVICE TYPE",     row[14] ? row[14].toString() : "N/A"],
     ["TECHNICIAN",       row[17] ? row[17].toString() : "N/A"],
     ["RESOLVED STATUS",  row[18] ? row[18].toString() : "N/A"],
-    ["PAYMENT RECEIVED", row[19] ? row[19].toString() : "N/A"],
+    ["PAYMENT RECEIVED",  row[19] ? row[19].toString() : "N/A"],
     ["REPORT TYPE",      row[23] ? row[23].toString() : "N/A"],
   ];
   const custTable = body.appendTable(custData);
   custTable.setBorderWidth(0);
   styleInfoTable(custTable, BGRAY, GRAY, DARK, GREEN, AMBER, LGRAY, WHITE);
-  body.appendParagraph('').setSpacingAfter(8);
+  body.appendParagraph('').setSpacingAfter(6);
 
-  // 6. AC UNIT DETAILS – chunked with repeated header
+  // 6. AC UNIT DETAILS
   appendSvcHeader(body, 'AC UNIT DETAILS', RED);
 
   const models          = splitCSV(row[7]);
   const serials         = splitCSV(row[8]);
-  // row[9] (locations) — REMOVED
+  const locations       = splitCSV(row[9]);   // ✅ back
   const machTypes       = splitCSV(row[10]);
   const gasTypes        = splitCSV(row[11]);
-  const problems        = splitCSV(row[12]);
-  const actions         = splitCSV(row[13]);
+  // const problems        = splitCSV(row[12]);
+  // const actions         = splitCSV(row[13]);
   const brands          = splitCSV(row[15]);
-  const problemStatuses = splitCSV(row[25]); // ← NEW: col Z (index 25)
+  // const problemStatuses = splitCSV(row[25]);
 
-  const acCount = Math.max(
-    models.length, serials.length,
-    machTypes.length, gasTypes.length, problems.length, actions.length,
-    brands.length, problemStatuses.length, 1
+  const acHeader = [
+    "S/N",
+    "MACHINE BRAND",
+    "MODEL",
+    "SERIAL NO",
+    "LOCATION",
+    "MACHINE TYPE",
+    "GAS TYPE",
+    "PROBLEM",
+    "ACTION TAKEN",
+    "PROBLEM STATUS"
+  ];
+
+// problems/actions/problemStatuses are FREE-TEXT and may contain commas in descriptions
+// which would create phantom rows — they are capped instead
+const acCount = Math.max(
+    models.length,
+    serials.length,
+    locations.length,
+    machTypes.length,
+    gasTypes.length,
+    brands.length,
+    1
   );
 
-  // ← LOCATION removed, PROBLEM STATUS added at end
-  const acHeader   = ["S/N", "MACHINE BRAND", "MODEL", "SERIAL NO", "MACHINE TYPE", "GAS TYPE", "PROBLEM", "ACTION TAKEN", "PROBLEM STATUS"];
+// Cap free-text fields to acCount so long descriptions with commas don't spawn extra rows
+const problems        = capFreeText_(splitCSV(row[12]), acCount);
+const actions         = capFreeText_(splitCSV(row[13]), acCount);
+const problemStatuses = capFreeText_(splitCSV(row[25]), acCount);
+
   const acDataRows = [];
   for (let r = 0; r < acCount; r++) {
     acDataRows.push([
       String(r + 1),
-      brands[r]           || "—",
-      models[r]           || "—",
-      serials[r]          || "—",
-      machTypes[r]        || "—",
-      gasTypes[r]         || "—",
-      problems[r]         || "—",
-      actions[r]          || "—",
-      problemStatuses[r]  || "—"  // ← NEW
+      brands[r]          || "—",
+      models[r]          || "—",
+      serials[r]         || "—",
+      locations[r]       || "—",
+      machTypes[r]       || "—",
+      gasTypes[r]        || "—",
+      problems[r]        || "—",
+      actions[r]         || "—",
+      problemStatuses[r] || "—"
     ]);
   }
 
-  const acFontSize = acCount <= 4 ? 10 : acCount <= 8 ? 9 : 8;
+  const acFontSize = getAutoAcFontSize_(acDataRows);
 
-  let chunkStart   = 0;
-  let isFirstChunk = true;
-  while (chunkStart < acDataRows.length) {
-    if (!isFirstChunk) {
+  // Dynamic column widths
+  const acColWidths = buildAcColumnWidths_(acHeader, acDataRows);
+
+  // Smart pagination: estimate row heights and keep page-safe spacing
+  const chunks = paginateAcRows_(acDataRows, acColWidths, hasProof);
+
+  for (let i = 0; i < chunks.length; i++) {
+    if (i > 0) {
       body.appendPageBreak();
       appendPageTopSpacer(body);
       appendSvcHeader(body, 'AC UNIT DETAILS (continued)', RED);
-      body.appendParagraph('').setSpacingBefore(0).setSpacingAfter(10);
     }
-    const chunkEnd  = Math.min(chunkStart + MAX_AC_ROWS_PER_PAGE, acDataRows.length);
-    const chunkRows = [acHeader].concat(acDataRows.slice(chunkStart, chunkEnd));
+
+    const chunkRows = [acHeader].concat(chunks[i].rows);
     const acTable   = body.appendTable(chunkRows);
     acTable.setBorderWidth(1).setBorderColor('#AAAAAA');
-    styleACTable(acTable, RED, DARK, GRAY, WHITE, LGRAY, acFontSize);
 
-    chunkStart   = chunkEnd;
-    isFirstChunk = false;
+    styleACTable(acTable, RED, DARK, GRAY, WHITE, LGRAY, acFontSize, acColWidths);
+
+    body.appendParagraph('').setSpacingAfter(4);
   }
 
-  // 7. PAYMENT PROOF + SIGNATURES – always on a fresh page
+  // 7. PAYMENT PROOF + SIGNATURES
+const sigSectionHeight  = estimatePaymentSectionHeight_(hasProof);
+const lastChunk         = chunks[chunks.length - 1] || { height: 0, pageIndex: 0 };
+
+// How much space remains on the last AC chunk's page after all content so far?
+// pageIndex 0 = first page (customer section + headers occupy ~FIXED_CONTENT_HEIGHT_PT)
+// pageIndex 1+ = continuation page (only the AC continuation header occupies CONTINUATION_OH_PT)
+const pageOverheadPt    = (lastChunk.pageIndex === 0) ? FIXED_CONTENT_HEIGHT_PT : CONTINUATION_OH_PT;
+const remainingOnPagePt = FULL_PAGE_HEIGHT_PT - pageOverheadPt - lastChunk.height;
+
+if (remainingOnPagePt >= 0 && remainingOnPagePt < sigSectionHeight) {
+  // AC content fits on page but not enough room for the signature/payment section → move it to the next page.
   body.appendPageBreak();
   appendPageTopSpacer(body);
-
-  const payProofVal = row[24] ? row[24].toString().trim() : "";
-  const skipProof   = ["", "n/a", "no proof uploaded", "no proof", "none"];
-  const hasProof    = payProofVal && !skipProof.includes(payProofVal.toLowerCase());
+} else {
+  // Two safe cases:
+  //   (a) remainingOnPagePt >= sigSectionHeight  → plenty of room, signatures fit on same page.
+  //   (b) remainingOnPagePt < 0                  → AC content already naturally overflowed to the next page
+  //       in Google Docs rendering; adding another programmatic break here would create a blank page.
+  //       Let signatures flow naturally — they will land on that same overflow page with room to spare.
+  body.appendParagraph('').setSpacingAfter(6);
+}
 
   if (hasProof) {
     const proofHdrPara = body.appendParagraph('PAYMENT PROOF');
-    proofHdrPara.setSpacingBefore(0).setSpacingAfter(12);
+    proofHdrPara.setSpacingBefore(6).setSpacingAfter(8);
     proofHdrPara.editAsText()
       .setFontFamily('Arial').setFontSize(10).setBold(true).setForegroundColor(RED);
 
@@ -232,34 +315,39 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
       if (!proofIdMatch) throw new Error("No file ID found");
       const proofBlob = DriveApp.getFileById(proofIdMatch[0]).getBlob();
       const imgEl = body.appendImage(proofBlob);
+
       const origW = imgEl.getWidth();
       const origH = imgEl.getHeight();
       const scale = Math.min(260 / origW, 200 / origH, 1);
       imgEl.setWidth(Math.round(origW * scale)).setHeight(Math.round(origH * scale));
-    } catch(e) {
+    } catch (e) {
       Logger.log("Payment proof error: " + e);
       const proofLinkPara = body.appendParagraph('View Payment Proof');
       proofLinkPara.editAsText()
-        .setFontFamily('Arial').setFontSize(10).setForegroundColor('#1155CC')
-        .setUnderline(true).setLinkUrl(payProofVal);
+        .setFontFamily('Arial')
+        .setFontSize(10)
+        .setForegroundColor('#1155CC')
+        .setUnderline(true)
+        .setLinkUrl(payProofVal);
     }
 
-    body.appendParagraph('').setSpacingBefore(0).setSpacingAfter(20);
+    body.appendParagraph('').setSpacingAfter(10);
   }
 
   const sigHdrPara = body.appendParagraph('SIGNATURES');
-  sigHdrPara.setSpacingBefore(0).setSpacingAfter(16);
+  sigHdrPara.setSpacingBefore(4).setSpacingAfter(10);
   sigHdrPara.editAsText()
     .setFontFamily('Arial').setFontSize(10).setBold(true).setForegroundColor(RED);
 
   const sigTable = body.appendTable([['', '']]);
   sigTable.setBorderWidth(0);
 
+  // Customer signature
   const custSig = sigTable.getCell(0, 0);
-  custSig.setPaddingTop(6).setPaddingBottom(6).setPaddingLeft(0).setPaddingRight(10);
+  custSig.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(0).setPaddingRight(10);
   custSig.setBackgroundColor(WHITE);
   const custLbl = custSig.appendParagraph("Customer Signature");
-  custLbl.setSpacingBefore(0).setSpacingAfter(10);
+  custLbl.setSpacingBefore(0).setSpacingAfter(8);
   custLbl.editAsText().setFontFamily('Arial').setFontSize(9).setBold(true).setForegroundColor(GRAY);
 
   if (row[20] && row[20].toString().includes("base64")) {
@@ -268,7 +356,7 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
         Utilities.base64Decode(row[20].toString().split(",")[1]), "image/png"
       );
       custSig.appendImage(blob).setWidth(150).setHeight(75);
-    } catch(e) {
+    } catch (e) {
       custSig.appendParagraph("(signature unavailable)").editAsText()
         .setFontFamily('Arial').setFontSize(10).setForegroundColor(LGRAY);
       Logger.log("Customer sig error: " + e);
@@ -278,11 +366,12 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
       .setFontFamily('Arial').setFontSize(10).setForegroundColor(LGRAY);
   }
 
+  // Technician signature
   const techSig = sigTable.getCell(0, 1);
-  techSig.setPaddingTop(6).setPaddingBottom(6).setPaddingLeft(10).setPaddingRight(0);
+  techSig.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(10).setPaddingRight(0);
   techSig.setBackgroundColor(WHITE);
   const techLbl = techSig.appendParagraph("Technician Signature");
-  techLbl.setSpacingBefore(0).setSpacingAfter(10);
+  techLbl.setSpacingBefore(0).setSpacingAfter(8);
   techLbl.editAsText().setFontFamily('Arial').setFontSize(9).setBold(true).setForegroundColor(GRAY);
 
   if (row[21] && row[21].toString().includes("base64")) {
@@ -291,7 +380,7 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
         Utilities.base64Decode(row[21].toString().split(",")[1]), "image/png"
       );
       techSig.appendImage(blob).setWidth(150).setHeight(75);
-    } catch(e) {
+    } catch (e) {
       techSig.appendParagraph("(signature unavailable)").editAsText()
         .setFontFamily('Arial').setFontSize(10).setForegroundColor(LGRAY);
       Logger.log("Tech sig error: " + e);
@@ -301,8 +390,9 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
       .setFontFamily('Arial').setFontSize(10).setForegroundColor(LGRAY);
   }
 
-  body.appendParagraph('').setSpacingAfter(12);
+  body.appendParagraph('').setSpacingAfter(8);
 
+  // 8. Export PDF
   // 8. Export PDF
   doc.saveAndClose();
   Logger.log("Doc written OK — ID: " + id);
@@ -318,19 +408,31 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   DriveApp.getFileById(docId).setTrashed(true);
   Logger.log("Temp Doc deleted");
 
-  const suffix  = isTest ? "_ServiceReport_TEST.pdf" : "_ServiceReport.pdf";
-  const pdfName = Utilities.formatDate(new Date(), "GMT+5:30", "dd_MMM_yyyy")
-                  + "_" + id + suffix;
+  const clientName = sanitizeFileNamePart(row[2] ? row[2].toString() : "Unknown");
+  const suffix     = isTest ? "__DCR.pdf" : "_DCR.pdf";
+  const pdfName    = Utilities.formatDate(new Date(), "GMT+5:30", "yyyy-MM-dd")
+                    + "_" + id
+                    + "_" + clientName
+                    + suffix;
   return targetFolder.createFile(pdfResp.getBlob()).setName(pdfName);
 }
 
+function sanitizeFileNamePart(value) {
+  const raw = value ? value.toString().trim() : "";
+  if (!raw) return "Unknown";
+  return raw
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_\-]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'Unknown';
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
 function appendPageTopSpacer(body) {
   const spacer = body.appendParagraph('');
-  spacer.setSpacingBefore(0).setSpacingAfter(28);
+  spacer.setSpacingBefore(0).setSpacingAfter(PAGE_TOP_SPACER_PT);
   return spacer;
 }
 
@@ -343,7 +445,7 @@ function splitCSV(value) {
 
 function appendSvcHeader(body, text, color) {
   const para = body.appendParagraph(text);
-  para.setSpacingBefore(12).setSpacingAfter(6);
+  para.setSpacingBefore(SECTION_HEADER_BEFORE_PT).setSpacingAfter(SECTION_HEADER_AFTER_PT);
   para.editAsText()
       .setFontFamily('Arial').setFontSize(10).setBold(true)
       .setForegroundColor(color || '#D0312D');
@@ -380,23 +482,32 @@ function styleInfoTable(table, BGRAY, GRAY, DARK, GREEN, AMBER, LGRAY, WHITE) {
   }
 }
 
-function styleACTable(table, RED, DARK, GRAY, WHITE, LGRAY, acFontSize) {
-  const NUM_COLS = 9; // unchanged: removed LOCATION (+0), added PROBLEM STATUS (+0) = still 9
+function styleACTable(table, RED, DARK, GRAY, WHITE, LGRAY, acFontSize, colWidths) {
+  const NUM_COLS = 10;
+
+  for (let c = 0; c < NUM_COLS; c++) {
+    try {
+      table.setColumnWidth(c, colWidths[c]);
+    } catch (e) {
+      Logger.log("Column width set failed for col " + c + ": " + e);
+    }
+  }
 
   for (let r = 0; r < table.getNumRows(); r++) {
     const row = table.getRow(r);
     const isHeader = (r === 0);
-    const bgColor  = isHeader ? RED : WHITE;
 
     for (let c = 0; c < NUM_COLS; c++) {
       const cell = row.getCell(c);
-      cell.setBackgroundColor(bgColor)
-          .setPaddingTop(isHeader ? 6 : 5)
-          .setPaddingBottom(isHeader ? 6 : 5)
-          .setPaddingLeft(5)
-          .setPaddingRight(5);
+
+      cell.setBackgroundColor(isHeader ? RED : WHITE)
+          .setPaddingTop(isHeader ? 5 : 4)
+          .setPaddingBottom(isHeader ? 5 : 4)
+          .setPaddingLeft(4)
+          .setPaddingRight(4);
 
       const vt = cell.editAsText();
+
       if (isHeader) {
         vt.setFontFamily('Arial')
           .setFontSize(7.5)
@@ -415,4 +526,151 @@ function styleACTable(table, RED, DARK, GRAY, WHITE, LGRAY, acFontSize) {
       }
     }
   }
-}  //BY YASH RANE 25-04-2026
+}
+
+function getAutoAcFontSize_(rows) {
+  let maxLen = 0;
+  for (let r = 0; r < rows.length; r++) {
+    for (let c = 0; c < rows[r].length; c++) {
+      maxLen = Math.max(maxLen, (rows[r][c] || '').toString().length);
+    }
+  }
+
+  if (maxLen > 120) return 8;
+  if (maxLen > 80)  return 9;
+  if (maxLen > 50)  return 9.5;
+  return 10;
+}
+
+function buildAcColumnWidths_(header, rows) {
+  // Min / max widths in points
+  const minW = [28, 72, 82, 78, 78, 62, 52, 108, 110, 70];
+  const maxW = [36, 104, 125, 110, 118, 90, 72, 168, 168, 98];
+  const weights = [0.6, 1.1, 1.3, 1.2, 1.1, 0.9, 0.7, 2.4, 2.4, 1.0];
+
+  const maxLens = header.map(h => (h || '').toString().length);
+
+  for (let r = 0; r < rows.length; r++) {
+    for (let c = 0; c < rows[r].length; c++) {
+      maxLens[c] = Math.max(maxLens[c], (rows[r][c] || '').toString().length);
+    }
+  }
+
+  let raw = [];
+  let total = 0;
+
+  for (let c = 0; c < 10; c++) {
+    const lenFactor = Math.min(maxLens[c], 80);
+    let w = minW[c] + (lenFactor * weights[c] * 1.45);
+    w = Math.max(minW[c], Math.min(maxW[c], w));
+    raw.push(w);
+    total += w;
+  }
+
+  const targetTotal = 520; // a safe printable width for an A4-style report body
+  const scale = targetTotal / total;
+  let widths = raw.map(w => Math.round(w * scale));
+
+  // Fix rounding drift
+  let diff = targetTotal - widths.reduce((a, b) => a + b, 0);
+  let idx = 0;
+  while (diff !== 0 && idx < 200) {
+    for (let c = 0; c < widths.length && diff !== 0; c++) {
+      const step = diff > 0 ? 1 : -1;
+      const next = widths[c] + step;
+      if (next >= minW[c] && next <= maxW[c]) {
+        widths[c] = next;
+        diff -= step;
+      }
+    }
+    idx++;
+  }
+
+  return widths;
+}
+
+function estimateAcRowHeight_(row, colWidths) {
+  let maxLines = 1;
+
+  for (let c = 0; c < row.length; c++) {
+    const txt = (row[c] || '').toString().trim();
+    if (!txt || txt === '—' || txt === 'N/A') continue;
+    // 5.2pt per char at 9-10pt Arial (tighter than old 5.8 which over-estimated capacity)
+    const charCapacity = Math.max(4, Math.floor(colWidths[c] / 5.2));
+    const lines = Math.max(1, Math.ceil(txt.length / charCapacity));
+    maxLines = Math.max(maxLines, lines);
+  }
+
+  // 22pt base (1 line + cell padding), 13pt per additional wrapped line, ×1.15 safety factor
+  return Math.ceil((22 + ((maxLines - 1) * 13)) * 1.15);
+}
+
+function paginateAcRows_(acDataRows, colWidths, hasProof) {
+  const chunks = [];
+
+  let currentRows = [];
+  let currentHeight = 0;
+  let currentLimit = AC_FIRST_PAGE_BUDGET_PT;
+  let pageIndex = 0;
+
+  for (let i = 0; i < acDataRows.length; i++) {
+    const row = acDataRows[i];
+    const rowHeight = estimateAcRowHeight_(row, colWidths);
+
+    const tableHeaderHeight = (currentRows.length === 0) ? 18 : 0;
+    const projectedHeight = currentHeight + tableHeaderHeight + rowHeight;
+
+    if (currentRows.length > 0 && projectedHeight > currentLimit) {
+      chunks.push({
+        rows: currentRows,
+        height: currentHeight,
+        limit: currentLimit,
+        pageIndex: pageIndex
+      });
+
+      pageIndex++;
+      currentRows = [];
+      currentHeight = 0;
+      currentLimit = AC_OTHER_PAGE_BUDGET_PT;
+    }
+
+    if (currentRows.length === 0) {
+      currentHeight += 18; // table header
+    }
+
+    currentRows.push(row);
+    currentHeight += rowHeight;
+  }
+
+  if (currentRows.length > 0) {
+    chunks.push({
+      rows: currentRows,
+      height: currentHeight,
+      limit: currentLimit,
+      pageIndex: pageIndex
+    });
+  }
+
+  return chunks;
+}
+
+function estimatePaymentSectionHeight_(hasProof) {
+  // If proof is an image, the section needs much more space.
+  // These are safe layout estimates for deciding page breaks.
+  if (hasProof) return 260;
+  return 140;
+} 
+
+/**
+ * Caps a CSV-split array at maxCount.
+ * If the array is longer (e.g. commas inside a description), excess items are
+ * merged back into the last slot so no data is lost and no phantom rows appear.
+ */
+function capFreeText_(arr, maxCount) {
+  if (!arr || arr.length <= maxCount) return arr;
+  const capped = arr.slice(0, maxCount - 1);
+  capped.push(arr.slice(maxCount - 1).join(', '));
+  return capped;
+}
+ 
+// dev by yash 29-04-2026
