@@ -9,9 +9,19 @@ var TEST_COMPLAINT_FOLDER_ID  = "1gS6OUjSOffA-9CslWReJlkthZ94dZUas";
 var MAX_AC_ROWS_PER_PAGE = 7;
 
 // Layout tuning
-var AC_FIRST_PAGE_BUDGET_PT   = 390; // first AC block page after customer section
-var AC_OTHER_PAGE_BUDGET_PT   = 560; // continuation pages
-var PAGE_TOP_SPACER_PT        = 28;
+// var AC_FIRST_PAGE_BUDGET_PT   = 340; // first AC block page after customer section
+// var AC_OTHER_PAGE_BUDGET_PT   = 580; // continuation pages
+// var PAGE_TOP_SPACER_PT        = 14;
+// var SECTION_HEADER_BEFORE_PT   = 6;
+// var SECTION_HEADER_AFTER_PT    = 4;
+// var PAGE_BREAK_GAP_PT          = 0;
+
+var AC_FIRST_PAGE_BUDGET_PT   = 180; // available for AC on first page (page height minus ~400pt customer section)
+var AC_OTHER_PAGE_BUDGET_PT   = 530; // continuation page body budget
+var FULL_PAGE_HEIGHT_PT       = 580; // conservative A4 effective body height (accounts for template header/footer)
+var FIXED_CONTENT_HEIGHT_PT   = 400; // first-page fixed overhead: title + id + customer table + AC header
+var CONTINUATION_OH_PT        = 50;  // continuation page overhead: spacer + "AC UNIT DETAILS (continued)" header
+var PAGE_TOP_SPACER_PT        = 14;
 var SECTION_HEADER_BEFORE_PT   = 6;
 var SECTION_HEADER_AFTER_PT    = 4;
 var PAGE_BREAK_GAP_PT          = 0;
@@ -109,7 +119,7 @@ function buildComplaintDocAndExportPDF(row, id, targetFolder, isTest) {
   const doc      = DocumentApp.openById(docId);
   const body     = doc.getBody();
   body.clear();
-  body.setMarginTop(20); 
+
 
   // 2. Timestamp
   const now = new Date();
@@ -196,10 +206,10 @@ titleTable.setAttributes({
   const locations       = splitCSV(row[9]);   // ✅ back
   const machTypes       = splitCSV(row[10]);
   const gasTypes        = splitCSV(row[11]);
-  const problems        = splitCSV(row[12]);
-  const actions         = splitCSV(row[13]);
+  // const problems        = splitCSV(row[12]);
+  // const actions         = splitCSV(row[13]);
   const brands          = splitCSV(row[15]);
-  const problemStatuses = splitCSV(row[25]);
+  // const problemStatuses = splitCSV(row[25]);
 
   const acHeader = [
     "S/N",
@@ -214,18 +224,22 @@ titleTable.setAttributes({
     "PROBLEM STATUS"
   ];
 
-  const acCount = Math.max(
+// problems/actions/problemStatuses are FREE-TEXT and may contain commas in descriptions
+// which would create phantom rows — they are capped instead
+const acCount = Math.max(
     models.length,
     serials.length,
     locations.length,
     machTypes.length,
     gasTypes.length,
-    problems.length,
-    actions.length,
     brands.length,
-    problemStatuses.length,
     1
   );
+
+// Cap free-text fields to acCount so long descriptions with commas don't spawn extra rows
+const problems        = capFreeText_(splitCSV(row[12]), acCount);
+const actions         = capFreeText_(splitCSV(row[13]), acCount);
+const problemStatuses = capFreeText_(splitCSV(row[25]), acCount);
 
   const acDataRows = [];
   for (let r = 0; r < acCount; r++) {
@@ -268,16 +282,27 @@ titleTable.setAttributes({
   }
 
   // 7. PAYMENT PROOF + SIGNATURES
-  const paymentSectionHeight = estimatePaymentSectionHeight_(hasProof);
-  const lastChunk            = chunks[chunks.length - 1] || { height: 0, limit: AC_OTHER_PAGE_BUDGET_PT };
+const sigSectionHeight  = estimatePaymentSectionHeight_(hasProof);
+const lastChunk         = chunks[chunks.length - 1] || { height: 0, pageIndex: 0 };
 
-  // If the last AC page cannot safely hold payment/signature section, move to next page.
-  if ((lastChunk.height + paymentSectionHeight) > lastChunk.limit) {
-    body.appendPageBreak();
-    appendPageTopSpacer(body);
-  } else {
-    body.appendParagraph('').setSpacingAfter(6);
-  }
+// How much space remains on the last AC chunk's page after all content so far?
+// pageIndex 0 = first page (customer section + headers occupy ~FIXED_CONTENT_HEIGHT_PT)
+// pageIndex 1+ = continuation page (only the AC continuation header occupies CONTINUATION_OH_PT)
+const pageOverheadPt    = (lastChunk.pageIndex === 0) ? FIXED_CONTENT_HEIGHT_PT : CONTINUATION_OH_PT;
+const remainingOnPagePt = FULL_PAGE_HEIGHT_PT - pageOverheadPt - lastChunk.height;
+
+if (remainingOnPagePt >= 0 && remainingOnPagePt < sigSectionHeight) {
+  // AC content fits on page but not enough room for the signature/payment section → move it to the next page.
+  body.appendPageBreak();
+  appendPageTopSpacer(body);
+} else {
+  // Two safe cases:
+  //   (a) remainingOnPagePt >= sigSectionHeight  → plenty of room, signatures fit on same page.
+  //   (b) remainingOnPagePt < 0                  → AC content already naturally overflowed to the next page
+  //       in Google Docs rendering; adding another programmatic break here would create a blank page.
+  //       Let signatures flow naturally — they will land on that same overflow page with room to spare.
+  body.appendParagraph('').setSpacingAfter(6);
+}
 
   if (hasProof) {
     const proofHdrPara = body.appendParagraph('PAYMENT PROOF');
@@ -556,13 +581,15 @@ function estimateAcRowHeight_(row, colWidths) {
 
   for (let c = 0; c < row.length; c++) {
     const txt = (row[c] || '').toString().trim();
-    const charCapacity = Math.max(6, Math.floor(colWidths[c] / 5.8)); // rough chars per line
+    if (!txt || txt === '—' || txt === 'N/A') continue;
+    // 5.2pt per char at 9-10pt Arial (tighter than old 5.8 which over-estimated capacity)
+    const charCapacity = Math.max(4, Math.floor(colWidths[c] / 5.2));
     const lines = Math.max(1, Math.ceil(txt.length / charCapacity));
     maxLines = Math.max(maxLines, lines);
   }
 
-  // base row height + wrap height
-  return 15 + ((maxLines - 1) * 9);
+  // 22pt base (1 line + cell padding), 13pt per additional wrapped line, ×1.15 safety factor
+  return Math.ceil((22 + ((maxLines - 1) * 13)) * 1.15);
 }
 
 function paginateAcRows_(acDataRows, colWidths, hasProof) {
@@ -617,6 +644,20 @@ function paginateAcRows_(acDataRows, colWidths, hasProof) {
 function estimatePaymentSectionHeight_(hasProof) {
   // If proof is an image, the section needs much more space.
   // These are safe layout estimates for deciding page breaks.
-  if (hasProof) return 250;
+  if (hasProof) return 260;
   return 140;
+} 
+
+/**
+ * Caps a CSV-split array at maxCount.
+ * If the array is longer (e.g. commas inside a description), excess items are
+ * merged back into the last slot so no data is lost and no phantom rows appear.
+ */
+function capFreeText_(arr, maxCount) {
+  if (!arr || arr.length <= maxCount) return arr;
+  const capped = arr.slice(0, maxCount - 1);
+  capped.push(arr.slice(maxCount - 1).join(', '));
+  return capped;
 }
+ 
+// dev by yash 29-04-2026
