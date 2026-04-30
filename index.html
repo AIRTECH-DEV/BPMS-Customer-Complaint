@@ -88,6 +88,8 @@
             border-radius: 20px;
             font-size: 0.75rem;
         }
+
+
     </style>
 </head>
 <body class="bg-light">
@@ -449,23 +451,40 @@ const SESSION_ACTIVE_KEY = 'bpmsSessionActive';
 let isRestoringDraft = false;
 let savedPaymentProof = null;
 
+
 function loadActiveCustomers() {
     let select = document.getElementById('customerSelect');
     select.innerHTML = '<option value="">Loading active complaints...</option>';
     google.script.run
         .withSuccessHandler(list => {
             select.innerHTML = '<option value="">-- Choose --</option>';
-            list.forEach(name => {
+            list.forEach(item => {                                    // ✅ name → item
                 let opt = document.createElement('option');
-                opt.value = name;
-                opt.innerHTML = name;
+                opt.value = item.value;                               // ✅ name → item.value
+                opt.setAttribute('data-name', item.label);           // ✅ added
+                opt.setAttribute('data-address', item.address);      // ✅ added
+                opt.text = item.label;                                // ✅ added
                 select.appendChild(opt);
             });
+          
             // --- ADD THESE LINES START ---
+            function formatCustomer(option) {                         // ✅ added
+                if (!option.id) return option.text;
+                let name = $(option.element).data('name');
+                let address = $(option.element).data('address');
+                return $(`
+                    <div style="line-height:1.3">
+                        <div style="font-weight:500; font-size:14px;">${name}</div>
+                        <div style="font-size:12px; color:#666;">${address}</div>
+                    </div>
+                `);
+            }
+
             $('#customerSelect').select2({
                 placeholder: "-- Choose --",
                 allowClear: true,
-                width: '100%'
+                width: '100%',
+                templateResult: formatCustomer                        // ✅ added
             });
 
             // Since Select2 overrides standard change events, 
@@ -485,6 +504,47 @@ function loadActiveCustomers() {
         })
         .getCustomerList();
 }
+/*correct code*/
+/*function loadActiveCustomers() {
+    let select = document.getElementById('customerSelect');
+    select.innerHTML = '<option value="">Loading active complaints...</option>';
+    google.script.run
+        .withSuccessHandler(list => {
+            select.innerHTML = '<option value="">-- Choose --</option>';
+            list.forEach(name => {
+                let opt = document.createElement('option');
+                opt.value = name;
+                opt.innerHTML = name;
+                select.appendChild(opt);
+            });
+            
+          
+            // --- ADD THESE LINES START ---
+            $('#customerSelect').select2({
+                placeholder: "-- Choose --",
+                allowClear: true,
+                width: '100%'
+               
+            });
+
+            // Since Select2 overrides standard change events, 
+            // trigger your details fetch like this:
+            $('#customerSelect').on('select2:select', function (e) {
+                fetchDetails(); 
+            });
+            // --- ADD THESE LINES END ---
+            
+            // Only restore draft if this is a page refresh (sessionStorage exists)
+            // Fresh links should not restore old data
+            if (sessionStorage.getItem(SESSION_ACTIVE_KEY)) {
+                restoreDraft();
+            }
+            // Mark this session as active for future refreshes
+            sessionStorage.setItem(SESSION_ACTIVE_KEY, 'true');
+        })
+        .getCustomerList();
+}*/
+/*up to here*correct code*/
 
 window.onload = () => {
     customerPad = new SignaturePad(document.getElementById('customerCanvas'));
